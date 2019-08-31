@@ -46,6 +46,10 @@ public class GameController {
     public void onOpen(Session session, @PathParam("name") String name) throws Exception {
         this.session = session;
         LOGGER.info("用户{}进入房间", name);
+        if (userMap.size() == 0) {
+            // 当用户人数为0时重新开始游戏
+            currentGame =  new Game(GAMER_NOT_ENOUGH);
+        }
         if (userMap.values().size() == 4) {
             /* if (userMap.values().contains(name)) {
                 // 用户本身在这4人中，说明可能是掉线了，则更新用户的id
@@ -262,7 +266,17 @@ public class GameController {
 
                 List<String> nextUserNameList = new ArrayList<>();
                 if (!currentOutMajiang.isJin()) {
-                    // 打出的牌不是金时，根据胡、碰（杠）、吃的优先级判断下家
+                    // 打出的牌不是金时，根据金雀、胡、碰（杠）、吃的优先级判断下家
+                    if (MajiangUtil.canJinQueWithNewMajiang(nextUser.getUserMajiangList(), currentOutMajiang)) {
+                        nextUserNameList.add(nextUser.getUserNickName());
+                    }
+                    if (MajiangUtil.canJinQueWithNewMajiang(secondUser.getUserMajiangList(), currentOutMajiang)) {
+                        nextUserNameList.add(secondUser.getUserNickName());
+                    }
+                    if (MajiangUtil.canJinQueWithNewMajiang(thirdUser.getUserMajiangList(), currentOutMajiang)) {
+                        nextUserNameList.add(thirdUser.getUserNickName());
+                    }
+
                     if (MajiangUtil.canHuWithNewMajiang(nextUser.getUserMajiangList(), currentOutMajiang)) {
                         nextUserNameList.add(nextUser.getUserNickName());
                     }
@@ -272,6 +286,7 @@ public class GameController {
                     if (MajiangUtil.canHuWithNewMajiang(thirdUser.getUserMajiangList(), currentOutMajiang)) {
                         nextUserNameList.add(thirdUser.getUserNickName());
                     }
+
                     if (MajiangUtil.canPeng(secondUser.getUserMajiangList(), currentOutMajiang.getCode())) {
                         nextUserNameList.add(secondUser.getUserNickName());
                     } else if (MajiangUtil.canPeng(thirdUser.getUserMajiangList(), currentOutMajiang.getCode())) {

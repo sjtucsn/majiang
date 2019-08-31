@@ -154,6 +154,20 @@ public class MajiangUtil {
         }
     }
 
+    public static boolean canJinQueWithNewMajiang(List<Majiang> userMajiangList, Majiang newMajiang) {
+        List<Majiang> tmpMajiangList = new ArrayList<>(userMajiangList);
+        tmpMajiangList.add(newMajiang);
+
+        int jinNum = (int) tmpMajiangList.stream().filter(Majiang::isJin).count();
+        if (jinNum == 2) {
+            System.out.print("判断是不是金雀：");
+            List<Integer> majiangCodes = tmpMajiangList.stream().filter(majiang -> !majiang.isJin() && !majiang.isShow() && !majiang.isAnGang()).sorted(Comparator.comparing(Majiang::getCode)).map(Majiang::getCode).collect(Collectors.toList());
+            System.out.print(majiangCodes);
+            return canHuWithoutQue(majiangCodes);
+        }
+        return false;
+    }
+
     public static boolean canHuWithQiangJin(List<Majiang> userMajiangList, Majiang newMajiang) {
         List<Majiang> tmpMajiangList = new ArrayList<>(userMajiangList);
         tmpMajiangList.add(newMajiang);
