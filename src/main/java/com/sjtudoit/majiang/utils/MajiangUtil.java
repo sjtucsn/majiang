@@ -353,6 +353,10 @@ public class MajiangUtil {
                finalScore = 30 + 2 * baseScore;
             }
         }
+
+        if (flowerNum == 0 && mingGangNum == 0 && anGangNum == 0) {
+            finalScore += 10;
+        }
         return finalScore;
     }
 }
