@@ -283,17 +283,13 @@ public class MajiangUtil {
 
         int mingGangNum = 0;
         for (int i = 0; i < showList.size() - 3; i++) {
-            if (showList.get(i).equals(showList.get(i + 1)) && showList.get(i + 1).equals(showList.get(i + 2)) && showList.get(i + 2).equals(showList.get(i + 3))) {
+            if (showList.get(i).getCode().equals(showList.get(i + 1).getCode()) && showList.get(i + 1).getCode().equals(showList.get(i + 2).getCode()) && showList.get(i + 2).getCode().equals(showList.get(i + 3).getCode())) {
                 mingGangNum++;
             }
         }
 
         int baseScore = 5 + flowerNum + anGangNum + jinNum + mingGangNum;
         int finalScore = baseScore;
-
-        if (jinNum == 3) {
-            finalScore = 20 + 2 * baseScore;
-        }
 
         switch (type) {
             case "抢金": {
@@ -308,6 +304,10 @@ public class MajiangUtil {
                 finalScore = 2 * baseScore;
                 break;
             }
+        }
+
+        if (jinNum == 3) {
+            finalScore = 20 + 2 * baseScore;
         }
 
         if (jinNum == 2) {
