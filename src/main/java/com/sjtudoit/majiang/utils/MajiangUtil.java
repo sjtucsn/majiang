@@ -191,15 +191,36 @@ public class MajiangUtil {
         List<Majiang> jinList = majiangList.stream().filter(Majiang::isJin).collect(Collectors.toList());
         List<Integer> majiangCodes = majiangList.stream().filter(majiang -> !majiang.isJin()).sorted(Comparator.comparing(Majiang::getCode)).map(Majiang::getCode).collect(Collectors.toList());
 
-        if (shouldCheck3Jin && jinList.size() == 3) {
-            // 三头金直接胡
-            return true;
+        if (jinList.size() == 3) {
+            if (shouldCheck3Jin) {
+                // 三头金直接胡
+                return true;
+            } else {
+                // 抢金到三头金时的判断
+                for (Integer code1 : mjCodeArray) {
+                    majiangCodes.add(code1);
+                    for (Integer code2 : mjCodeArray) {
+                        majiangCodes.add(code2);
+                        for (Integer code3: mjCodeArray) {
+                            majiangCodes.add(code3);
+                            Collections.sort(majiangCodes);
+                            if (canHuWithQue(majiangCodes)) {
+                                return true;
+                            }
+                            majiangCodes.remove(code3);
+                        }
+                        majiangCodes.remove(code2);
+                    }
+                    majiangCodes.remove(code1);
+                }
+
+            }
         }
 
         if (jinList.size() == 2) {
             for (Integer code1 : mjCodeArray) {
                 majiangCodes.add(code1);
-                for (Integer code2 : mjCodeArray) {
+                for (int code2 : mjCodeArray) {
                     majiangCodes.add(code2);
                     Collections.sort(majiangCodes);
                     if (canHuWithQue(majiangCodes)) {
