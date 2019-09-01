@@ -220,13 +220,14 @@ public class MajiangUtil {
         if (jinList.size() == 2) {
             for (Integer code1 : mjCodeArray) {
                 majiangCodes.add(code1);
-                for (int code2 : mjCodeArray) {
+                for (Integer code2 : mjCodeArray) {
                     majiangCodes.add(code2);
                     Collections.sort(majiangCodes);
                     if (canHuWithQue(majiangCodes)) {
                         return true;
+                    } else {
+                        majiangCodes.remove(code2);
                     }
-                    majiangCodes.remove(code2);
                 }
                 majiangCodes.remove(code1);
             }
