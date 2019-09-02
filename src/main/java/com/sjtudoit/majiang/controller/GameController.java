@@ -658,8 +658,7 @@ public class GameController {
     }
 
     @OnError
-    public void onError(Session session, Throwable error) throws Exception{
-        session.close();
+    public void onError(Session session, Throwable error){
         LOGGER.error("websocket连接出错", error);
     }
 
