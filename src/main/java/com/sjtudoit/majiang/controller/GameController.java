@@ -123,6 +123,10 @@ public class GameController {
         Message receivedMessage = JSONObject.parseObject(str, new TypeReference<Message<String>>() {});
         String currentUserName = userMap.get(this.session.getId());
 
+        if (receivedMessage.getType().equals(HEART_BEAT)) {
+            // 心跳包不响应
+            return;
+        }
         // 响应准备操作
         if (receivedMessage.getType().equals(CLIENT_READY)) {
             List<User> userList = currentGame.getUserList();

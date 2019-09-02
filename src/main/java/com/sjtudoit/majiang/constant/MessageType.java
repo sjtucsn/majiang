@@ -1,6 +1,7 @@
 package com.sjtudoit.majiang.constant;
 
 public class MessageType {
+    public final static int HEART_BEAT = -1;
     public final static int CLIENT_READY = 0;
     public final static int START_GAME = 1;
     public final static int RESET_FLOWER = 2;
