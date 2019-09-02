@@ -7,6 +7,8 @@ import com.sjtudoit.majiang.dto.User;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.sjtudoit.majiang.constant.MessageType.*;
+
 public class MajiangUtil {
     private static List<Integer> mjCodeArray = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29);
 
@@ -34,72 +36,32 @@ public class MajiangUtil {
     }
     /**
      * 开始新游戏
-     * @param id 庄家的sessionId
-     * @param name 庄家的名称
-     * @param userMap 所有玩家Map
+     * @param bankerName 庄家的名称
+     * @param userList 所有玩家的列表
      * @return 新游戏对象
      */
-    public static Game newGame(String id, String name, Map<String, String> userMap) {
+    public static Game newGame(String bankerName, List<User> userList) {
         List<Majiang> majiangList = generateMajiangList();
 
-        Map<String, String> tmpMap = new HashMap<>(userMap);
-        tmpMap.remove(id);
-        Iterator<String> iterator = tmpMap.values().iterator();
-
-        // user1是庄家
-        User user1 = new User(0, name, new ArrayList<>(majiangList.subList(0, 17)).stream().sorted(Comparator.comparing(Majiang::getId)).collect(Collectors.toList()));
-        User user2 = new User(1, iterator.next(), new ArrayList<>(majiangList.subList(17, 33)).stream().sorted(Comparator.comparing(Majiang::getId)).collect(Collectors.toList()));
-        User user3 = new User(2, iterator.next(), new ArrayList<>(majiangList.subList(33, 49)).stream().sorted(Comparator.comparing(Majiang::getId)).collect(Collectors.toList()));
-        User user4 = new User(3, iterator.next(), new ArrayList<>(majiangList.subList(49, 65)).stream().sorted(Comparator.comparing(Majiang::getId)).collect(Collectors.toList()));
-
-        majiangList = new ArrayList<>(majiangList.subList(65, 128));
-
-        List<User> userList = new ArrayList<User>() {{
-            add(user1);
-            add(user2);
-            add(user3);
-            add(user4);
-        }};
-
-        Game game = new Game(userList, majiangList, name);
-
-        // 判断谁先补花
-        if (user1.getUserMajiangList().get(16).getCode() > 30) {
-            game.setCurrentUserName(user1.getUserNickName());
-        } else if (user2.getUserMajiangList().get(15).getCode() > 30) {
-            game.setCurrentUserName(user2.getUserNickName());
-        } else if (user3.getUserMajiangList().get(15).getCode() > 30) {
-            game.setCurrentUserName(user3.getUserNickName());
-        } else if (user4.getUserMajiangList().get(15).getCode() > 30) {
-            game.setCurrentUserName(user4.getUserNickName());
-        } else {
-            // 如果大家都没花，则还是user1庄家出牌
-            game.setCurrentUserName(user1.getUserNickName());
-        }
-        return game;
-    }
-
-    public static Game newGame(Game previousGame) {
-        List<Majiang> majiangList = generateMajiangList();
-
-        List<User> userList = previousGame.getUserList();
         for (int i = 0; i < userList.size(); i++) {
             User user = userList.get(i);
+            user.setBanker(false);
             user.setOutList(new ArrayList<>());
             user.setFlowerList(new ArrayList<>());
 
             user.setUserMajiangList(new ArrayList<>(majiangList.subList(16 * i, 16 * (i + 1))).stream().sorted(Comparator.comparing(Majiang::getId)).collect(Collectors.toList()));
-            if (user.getUserNickName().equals(previousGame.getBankerName())) {
+            if (user.getUserNickName().equals(bankerName)) {
                 user.addMajiang(majiangList.get(64));
+                user.setBanker(true);
                 user.sortMajiangList();
             }
         }
 
         majiangList = new ArrayList<>(majiangList.subList(65, 128));
-        Game game = new Game(userList, majiangList, previousGame.getBankerName());
+        Game game = new Game(userList, majiangList, bankerName);
 
         // 判断谁先补花
-        User bankerUser = userList.stream().filter(user -> user.getUserNickName().equals(previousGame.getBankerName())).collect(Collectors.toList()).get(0);
+        User bankerUser = userList.stream().filter(user -> user.getUserNickName().equals(bankerName)).collect(Collectors.toList()).get(0);
         if (bankerUser.getUserMajiangList().get(16).getCode() > 30) {
             game.setCurrentUserName(bankerUser.getUserNickName());
         } else if (userList.get((bankerUser.getIndex() + 1) % 4).getUserMajiangList().get(15).getCode() > 30) {
@@ -112,7 +74,6 @@ public class MajiangUtil {
             // 如果大家都没花，则还是庄家出牌
             game.setCurrentUserName(bankerUser.getUserNickName());
         }
-
         return game;
     }
 
@@ -162,7 +123,7 @@ public class MajiangUtil {
         if (jinNum == 2) {
             System.out.print("判断是不是金雀：");
             List<Integer> majiangCodes = tmpMajiangList.stream().filter(majiang -> !majiang.isJin() && !majiang.isShow() && !majiang.isAnGang()).sorted(Comparator.comparing(Majiang::getCode)).map(Majiang::getCode).collect(Collectors.toList());
-            System.out.print(majiangCodes);
+            System.out.println(majiangCodes);
             return canHuWithoutQue(majiangCodes);
         }
         return false;
@@ -213,7 +174,6 @@ public class MajiangUtil {
                     }
                     majiangCodes.remove(code1);
                 }
-
             }
         }
 
@@ -298,17 +258,25 @@ public class MajiangUtil {
         }
     }
 
+    public static void countTie(List<User> userList) {
+        for (User user : userList) {
+            user.setScoreChange(0);
+        }
+    }
+
     public static void countScore(List<User> userList, User huUser, int moneyNum) {
         for (int i = 0; i < userList.size(); i++) {
             if (i == huUser.getIndex()) {
                 userList.get(i).setScore(userList.get(i).getScore() + 3 * moneyNum);
+                userList.get(i).setScoreChange(3 * moneyNum);
             } else {
                 userList.get(i).setScore(userList.get(i).getScore() - moneyNum);
+                userList.get(i).setScoreChange(-moneyNum);
             }
         }
     }
 
-    public static int calculateScore(User huUser, String type) {
+    public static int calculateScore(User huUser, String type, Game currentGame) {
         List<Majiang> majiangList = huUser.getUserMajiangList();
 
         int flowerNum = huUser.getFlowerList().size();
@@ -330,31 +298,36 @@ public class MajiangUtil {
         switch (type) {
             case "抢金": {
                 finalScore = 20 + 2 * baseScore;
+                currentGame.setMessageType(HU_QIANG_JIN);
                 break;
             }
             case "平胡": {
                 finalScore = baseScore;
+                currentGame.setMessageType(HU_PING_HU);
                 break;
             }
             case "自摸": {
                 finalScore = 2 * baseScore;
+                currentGame.setMessageType(HU_ZI_MO);
                 break;
             }
         }
 
-        if (jinNum == 3) {
+        if (jinNum == 3 && currentGame.getMessageType() != HU_QIANG_JIN) {
             finalScore = 20 + 2 * baseScore;
+            currentGame.setMessageType(HU_THREE_JIN);
         }
 
-        if (jinNum == 2) {
-            System.out.println("判断是不是金雀");
+        if (jinNum == 2 && currentGame.getMessageType() != HU_QIANG_JIN) {
             List<Integer> majiangCodes = majiangList.stream().filter(majiang -> !majiang.isJin() && !majiang.isShow() && !majiang.isAnGang()).sorted(Comparator.comparing(Majiang::getCode)).map(Majiang::getCode).collect(Collectors.toList());
             if (canHuWithoutQue(majiangCodes)) {
                // 说明是金雀
-               finalScore = 30 + 2 * baseScore;
+                finalScore = 30 + 2 * baseScore;
+                currentGame.setMessageType(HU_JIN_QUE);
             }
         }
 
+        // 没花加十分
         if (flowerNum == 0 && mingGangNum == 0 && anGangNum == 0) {
             finalScore += 10;
         }

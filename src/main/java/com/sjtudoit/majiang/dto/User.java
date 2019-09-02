@@ -13,15 +13,23 @@ public class User {
     private Boolean canGang;
     private Boolean canHu;
     private Boolean canQiangJin;
+    private Boolean isBanker = false; // 是否为庄家
+    private Boolean ready = false; // 是否已准备
     private Integer score = 100; // 分数，默认一开始都是100
+    private Integer scoreChange = 0; // 分数变化
     private Integer stayNum = 0; // 占庄数
 
-    private List<Majiang> userMajiangList;
+    private List<Majiang> userMajiangList = new ArrayList<>();
     private List<Majiang> outList = new ArrayList<>();
 
     private List<Majiang> flowerList = new ArrayList<>();
 
     public User() {}
+
+    public User(String userNickName, Integer index) {
+        this.userNickName = userNickName;
+        this.index = index;
+    }
 
     public User(Integer index, String userNickName, List<Majiang> userMajiangList) {
         this.index = index;
@@ -77,12 +85,36 @@ public class User {
         this.canHu = canHu;
     }
 
+    public Boolean getBanker() {
+        return isBanker;
+    }
+
+    public void setBanker(Boolean banker) {
+        isBanker = banker;
+    }
+
+    public Boolean getReady() {
+        return ready;
+    }
+
+    public void setReady(Boolean ready) {
+        this.ready = ready;
+    }
+
     public Boolean getCanQiangJin() {
         return canQiangJin;
     }
 
     public void setCanQiangJin(Boolean canQiangJin) {
         this.canQiangJin = canQiangJin;
+    }
+
+    public Integer getScoreChange() {
+        return scoreChange;
+    }
+
+    public void setScoreChange(Integer scoreChange) {
+        this.scoreChange = scoreChange;
     }
 
     public List<Majiang> getUserMajiangList() {

@@ -4,11 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Game {
-    // 当前信息
+    // 当前信息类型
     private Integer messageType;
 
-    private List<User> userList = new ArrayList<>();
-    private List<Majiang> remainMajiangList;
+    // 当前传达的信息内容
+    private String message;
+
+    private List<User> userList = new ArrayList<User>() {{
+        add(new User());
+        add(new User());
+        add(new User());
+        add(new User());
+    }};
+
+    private List<Majiang> remainMajiangList = new ArrayList<>();
     private String currentUserName;
     private Majiang currentOutMajiang;
 
@@ -30,9 +39,13 @@ public class Game {
         this.messageType = messageType;
     }
 
+    public Game(Integer messageType, String message) {
+        this.messageType = messageType;
+        this.message = message;
+    }
+
     /**
      * 创建新的游戏对象
-     * @param userList 玩家数组
      * @param remainMajiangList 剩余麻将数组
      * @param bankerName 庄家名称
      */
@@ -50,6 +63,14 @@ public class Game {
 
     public void setMessageType(Integer messageType) {
         this.messageType = messageType;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 
     public List<User> getUserList() {
@@ -123,5 +144,12 @@ public class Game {
 
     public void setPhysicalNextUserName(String physicalNextUserName) {
         this.physicalNextUserName = physicalNextUserName;
+    }
+
+    public void setUnReady() {
+        for (int i = 0; i < userList.size(); i++) {
+            User user = userList.get(i);
+            user.setReady(false);
+        }
     }
 }

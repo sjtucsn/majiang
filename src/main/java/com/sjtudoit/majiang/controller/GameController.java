@@ -29,7 +29,7 @@ public class GameController {
     private static volatile int onlineCount = 0;
 
     // 创建默认当前游戏
-    private static Game currentGame = new Game(GAMER_NOT_ENOUGH);
+    private static Game currentGame = new Game(INFO);
 
     // concurrent包的线程安全Set，用来存放每个客户端对应的MyWebSocket对象
     private static CopyOnWriteArraySet<GameController> webSocketSet = new CopyOnWriteArraySet<>();
@@ -48,27 +48,22 @@ public class GameController {
         LOGGER.info("用户{}进入房间", name);
         if (userMap.size() == 0) {
             // 当用户人数为0时重新开始游戏
-            currentGame =  new Game(GAMER_NOT_ENOUGH);
+            currentGame =  new Game(INFO);
         }
-        if (userMap.values().size() == 4) {
-            /* if (userMap.values().contains(name)) {
-                // 用户本身在这4人中，说明可能是掉线了，则更新用户的id
-                Set<String> keySet = userMap.keySet();
-                Iterator<String> iterator = keySet.iterator();
-                while (iterator.hasNext()) {
-                    String id = iterator.next();
-                    if (userMap.get(id).equals(name)) {
-                        userMap.remove(id);
-                        userMap.put(this.session.getId(), name);
-                        LOGGER.info(userMap.toString());
-                        webSocketSet.add(this);
-                        break;
-                    }
-                }
-                return;
-            }*/
-            // 已满4个人，且4个人中无当前用户，则不再加人
+        if (userMap.size() == 4) {
+            // 已满4个人
             LOGGER.info("房间人数已满！");
+            // 向当前会话通知房间人数已满
+            currentGame.setMessageType(INFO);
+            currentGame.setMessage("房间人数已满");
+            session.getBasicRemote().sendText(JSONObject.toJSONString(currentGame, SerializerFeature.DisableCircularReferenceDetect));
+
+            // 广播通知某某用户进入房间
+            currentGame.setMessage(name + "进入房间");
+            sendMessage(currentGame);
+
+            // 2s后关闭当前会话
+            Thread.sleep(2000);
             session.close();
             return;
         }
@@ -77,13 +72,46 @@ public class GameController {
             LOGGER.info("该用户已存在. name={}", name);
             return;
         }
+
+        // 添加用户会话信息
         userMap.put(this.session.getId(), name);
-        LOGGER.info(userMap.toString());
         webSocketSet.add(this);
+
+        // 将用户加入牌桌
+        List<User> userList = currentGame.getUserList();
+        for (int i = 0; i < 4; i++) {
+            User user = userList.get(i);
+            if (user.getUserNickName() == null || name.equals(user.getUserNickName())) {
+                user.setIndex(i);
+                user.setUserNickName(name);
+                break;
+            }
+        }
+        // 广播用户进入房间
+        currentGame.setMessageType(INFO);
+        currentGame.setMessage(name + "进入房间");
+        sendMessage(currentGame);
+        LOGGER.info(userMap.toString());
     }
 
     @OnClose
-    public void onClose(@PathParam("name") String name) {
+    public void onClose(@PathParam("name") String name) throws Exception {
+        // 用户下线前删除牌桌内的信息
+        List<User> userList = currentGame.getUserList();
+        for (int i = 0; i < 4; i++) {
+            User user = userList.get(i);
+            if (name.equals(user.getUserNickName())) {
+                user.setUserNickName(null);
+                user.setReady(false);
+            }
+        }
+
+        // 广播用户下线
+        currentGame.setMessageType(INFO);
+        currentGame.setMessage(name + "退出房间");
+        sendMessage(currentGame);
+
+        // 删除用户会话信息
         userMap.remove(this.session.getId());
         webSocketSet.remove(this);
         LOGGER.info("{}下线", name);
@@ -95,37 +123,43 @@ public class GameController {
         Message receivedMessage = JSONObject.parseObject(str, new TypeReference<Message<String>>() {});
         String currentUserName = userMap.get(this.session.getId());
 
-        // 响应准备操作，若是刚进房间则currentGame的类型为CLIENT_READY，若游戏已经进行中（用户掉线后回来）则currentGame的类型为目前currentGame的类型
+        // 响应准备操作
         if (receivedMessage.getType().equals(CLIENT_READY)) {
-            if (currentGame.getMessageType() > CLIENT_READY) {
-                sendMessage(currentGame);
-            } else {
-                sendMessage(new Game(CLIENT_READY));
-            }
-            return;
-        }
+            List<User> userList = currentGame.getUserList();
+            for (int i = 0; i < 4; i++) {
+                User user = userList.get(i);
+                if (currentUserName.equals(user.getUserNickName())) {
+                    user.setReady(true);
 
-        // 如果游戏结束且指令不为START_GAME，则不响应操作
-        if (currentGame.getMessageType().equals(GAME_OVER) && !receivedMessage.getType().equals(START_GAME)) {
-            return;
+                    // 广播通知某某用户已准备
+                    currentGame.setMessageType(CLIENT_READY);
+                    currentGame.setMessage(currentUserName);
+                    sendMessage(currentGame);
+                    if (userList.stream().filter(User::getReady).count() == 4) {
+                        // 如果4个人都准备则游戏开始
+                        receivedMessage.setType(START_GAME);
+                        break;
+                    } else {
+                        return;
+                    }
+                }
+            }
         }
 
         // 响应游戏开始指令
         if (receivedMessage.getType().equals(START_GAME)) {
-            if (userMap.size() < 4) {
-                LOGGER.info("人数未满4人，不能开局");
-                sendMessage(new Game(GAMER_NOT_ENOUGH));
-                return;
-            }
             Game game;
-            if (currentGame.getMessageType().equals(GAME_OVER)) {
-                // 说明是接着上一次的游戏继续
-                game = MajiangUtil.newGame(currentGame);
+            if (currentGame.getRemainMajiangList().size() > 0) {
+                // 剩余麻将大于0，说明是接着上一次的游戏继续
+                game = MajiangUtil.newGame(currentGame.getBankerName(), currentGame.getUserList());
             } else {
-                game = MajiangUtil.newGame(this.session.getId(), currentUserName, userMap);
+                game = MajiangUtil.newGame(currentUserName, currentGame.getUserList());
             }
             game.setMessageType(START_GAME);
             currentGame = game;
+
+            // 游戏开始后设置全体用户状态为未准备，方便前端显示，等下次准备时再设为已准备
+            currentGame.setUnReady();
             sendMessage(game);
             return;
         }
@@ -222,7 +256,6 @@ public class GameController {
                             LOGGER.info(user.getUserNickName() + "的牌能否抢金：" + canQiangJin);
                             user.setCanQiangJin(canQiangJin);
                         }
-                        userList.set(i, user);
                     }
 
                     // 判断抢金顺序
@@ -314,6 +347,13 @@ public class GameController {
                 break;
             }
             case MJ_IN: {
+                // 判断是否和局
+                if (remainMajiangList.size() <= 16) {
+                    currentGame.setMessageType(MJ_TIE);
+                    MajiangUtil.countTie(userList);
+                    sendMessage(currentGame);
+                    return;
+                }
                 if (currentUser.getUserMajiangList().stream().filter(majiang -> !majiang.isShow() && !majiang.isAnGang()).count() % 3 != 1) {
                     // 防止网络延时的误操作
                     LOGGER.info("指令无效，不能再摸牌");
@@ -331,6 +371,13 @@ public class GameController {
                 break;
             }
             case MJ_ADD_FLOWER: {
+                // 判断是否和局
+                if (remainMajiangList.size() <= 16) {
+                    currentGame.setMessageType(MJ_TIE);
+                    MajiangUtil.countTie(userList);
+                    sendMessage(currentGame);
+                    return;
+                }
                 // 摸牌时摸到花，则补花（肯定在最后一个）
                 Majiang currentOutMajiang = currentUser.getUserMajiangList().remove((currentUser.getUserMajiangList().size() - 1));
                 currentUser.addFlowerList(currentOutMajiang);
@@ -378,6 +425,11 @@ public class GameController {
             }
             case MJ_PENG: {
                 Majiang currentOutMajiang = currentGame.getCurrentOutMajiang();
+                if (currentOutMajiang == null) {
+                    System.out.println("当前无出牌，碰牌操作无效");
+                    return;
+                }
+
                 Integer code = currentOutMajiang.getCode();
 
                 // 防止网络不好时误操作
@@ -410,6 +462,10 @@ public class GameController {
             }
             case MJ_GANG: {
                 Majiang currentOutMajiang = currentGame.getCurrentOutMajiang();
+                if (currentOutMajiang == null) {
+                    System.out.println("当前无出牌，杠牌操作无效");
+                    return;
+                }
                 Integer code = currentOutMajiang.getCode();
 
                 // 防止网络不好时误操作
@@ -497,7 +553,6 @@ public class GameController {
                 // 庄家
                 User banker = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getBankerName())).collect(Collectors.toList()).get(0);
 
-
                 if ("抢金".equals(message)) {
                     // 判断是否抢金
                     List<Majiang> majiangList = huUser.getUserMajiangList();
@@ -506,7 +561,7 @@ public class GameController {
                         huUser.sortMajiangList();
 
                         // 分数为20+2*(5+花+暗杠数+金)
-                        int moneyNum = MajiangUtil.calculateScore(huUser, "抢金");
+                        int moneyNum = MajiangUtil.calculateScore(huUser, "抢金", currentGame);
                         huUser.setMajiangHu();
 
                         // 更新游戏信息
@@ -522,6 +577,10 @@ public class GameController {
                 if (huUser.needAddMajiang()) {
                     // 用户的麻将数差1，还需要加一张才能胡
                     LOGGER.info("判断是否平胡");
+                    if (currentOutMajiang == null) {
+                        System.out.println("当前无出牌，胡牌操作无效");
+                        return;
+                    }
                     boolean canHu = MajiangUtil.canHuWithNewMajiang(huUser.getUserMajiangList(), currentOutMajiang);
                     System.out.println(canHu);
                     if (canHu) {
@@ -530,7 +589,7 @@ public class GameController {
                         huUser.sortMajiangList();
 
                         // 分数为5+花+暗杠数+金
-                        int moneyNum = MajiangUtil.calculateScore(huUser, "平胡");
+                        int moneyNum = MajiangUtil.calculateScore(huUser, "平胡", currentGame);
                         huUser.setMajiangHu();
 
                         // 更新游戏信息
@@ -549,7 +608,13 @@ public class GameController {
                         huUser.sortMajiangList();
 
                         // 分数为2*（5+花+暗杠数+金+占庄数）
-                        int moneyNum = MajiangUtil.calculateScore(huUser, "自摸");
+                        int moneyNum;
+                        if (currentGame.getCurrentInMajiang() == null) {
+                            // 如果是点了吃碰后再点的胡，则currentInMajiang为空，此处算分时应纠正为平胡
+                            moneyNum = MajiangUtil.calculateScore(huUser, "平胡", currentGame);
+                        } else {
+                            moneyNum = MajiangUtil.calculateScore(huUser, "自摸", currentGame);
+                        }
                         huUser.setMajiangHu();
 
                         // 更新游戏信息
@@ -580,6 +645,8 @@ public class GameController {
                 break;
             }
             case GAME_OVER: {
+                // 游戏结束时设置金为空，方便前端判断游戏是否正在进行中，若金为空则需要前端准备
+                currentGame.setJin(null);
                 sendMessage(currentGame);
                 break;
             }
