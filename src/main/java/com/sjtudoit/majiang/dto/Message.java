@@ -2,6 +2,7 @@ package com.sjtudoit.majiang.dto;
 
 public class Message<T> {
     private Integer type;
+    private String userName;
     private T message;
 
     public Message() {
@@ -22,6 +23,14 @@ public class Message<T> {
 
     public void setType(Integer type) {
         this.type = type;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     public T getMessage() {

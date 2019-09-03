@@ -10,6 +10,9 @@ public class Game {
     // 当前传达的信息内容
     private String message;
 
+    // 当前信息的传达者，仅在messageType为CHAT时有用
+    private String messageUserName;
+
     private List<User> userList = new ArrayList<User>() {{
         add(new User());
         add(new User());
@@ -39,9 +42,10 @@ public class Game {
         this.messageType = messageType;
     }
 
-    public Game(Integer messageType, String message) {
+    public Game(Integer messageType, String message, String messageUserName) {
         this.messageType = messageType;
         this.message = message;
+        this.messageUserName = messageUserName;
     }
 
     /**
@@ -71,6 +75,14 @@ public class Game {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getMessageUserName() {
+        return messageUserName;
+    }
+
+    public void setMessageUserName(String messageUserName) {
+        this.messageUserName = messageUserName;
     }
 
     public List<User> getUserList() {

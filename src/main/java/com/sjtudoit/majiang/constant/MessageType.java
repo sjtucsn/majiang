@@ -23,4 +23,5 @@ public class MessageType {
     public final static int MJ_TIE= 18;
     public final static int INFO= 19;
     public final static int GAME_OVER = 20;
+    public final static int CHAT = 101;
 }

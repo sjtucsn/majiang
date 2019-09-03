@@ -123,6 +123,11 @@ public class GameController {
         Message receivedMessage = JSONObject.parseObject(str, new TypeReference<Message<String>>() {});
         String currentUserName = userMap.get(this.session.getId());
 
+        if (receivedMessage.getType().equals(CHAT)) {
+            sendMessage(receivedMessage);
+            return;
+        }
+
         if (receivedMessage.getType().equals(HEART_BEAT)) {
             // 心跳包不响应
             return;
@@ -324,7 +329,9 @@ public class GameController {
                         nextUserNameList.add(thirdUser.getUserNickName());
                     }
 
-                    if (MajiangUtil.canPeng(secondUser.getUserMajiangList(), currentOutMajiang.getCode())) {
+                    if (MajiangUtil.canPeng(nextUser.getUserMajiangList(), currentOutMajiang.getCode())) {
+                        nextUserNameList.add(nextUser.getUserNickName());
+                    } else if (MajiangUtil.canPeng(secondUser.getUserMajiangList(), currentOutMajiang.getCode())) {
                         nextUserNameList.add(secondUser.getUserNickName());
                     } else if (MajiangUtil.canPeng(thirdUser.getUserMajiangList(), currentOutMajiang.getCode())) {
                         nextUserNameList.add(thirdUser.getUserNickName());
@@ -672,6 +679,20 @@ public class GameController {
             if (gameController.session.isOpen()) {
                 // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
                 gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(game, SerializerFeature.DisableCircularReferenceDetect));
+            }
+        }
+    }
+
+    /**
+     * 通过websocket发送聊天消息
+     * @param message 当前消息对象
+     * @throws Exception
+     */
+    public void sendMessage(Message message) throws Exception {
+        for (GameController gameController : webSocketSet) {
+            if (gameController.session.isOpen()) {
+                // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
+                gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(message, SerializerFeature.DisableCircularReferenceDetect));
             }
         }
     }
