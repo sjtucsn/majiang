@@ -122,15 +122,17 @@ public class GameController {
             }
         }
 
-        // 广播用户下线
+        // 删除用户会话信息
+        userMap.remove(this.session.getId());
+        System.out.println(userMap);
+	webSocketSet.remove(this);
+        System.out.println(webSocketSet);
+	LOGGER.info("{}下线", name);
+        
+	// 广播用户下线
         currentGame.setMessageType(INFO);
         currentGame.setMessage(name + "退出房间");
         sendMessage(currentGame);
-
-        // 删除用户会话信息
-        userMap.remove(this.session.getId());
-        webSocketSet.remove(this);
-        LOGGER.info("{}下线", name);
     }
 
     @OnMessage
