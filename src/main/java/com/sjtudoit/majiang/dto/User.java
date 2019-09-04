@@ -181,7 +181,7 @@ public class User {
     public void sortMajiangList() {
         // 麻将显示顺序，先暗杠、再亮牌、再金、最后普通牌
         List<Majiang> tmpList = userMajiangList.stream().filter(Majiang::isAnGang).collect(Collectors.toList());
-        List<Majiang> showList = userMajiangList.stream().filter(Majiang::isShow).collect(Collectors.toList());
+        List<Majiang> showList = userMajiangList.stream().filter(Majiang::isShow).sorted(Comparator.comparing(Majiang::getId)).collect(Collectors.toList());
         List<Majiang> jinList = userMajiangList.stream().filter(Majiang::isJin).collect(Collectors.toList());
         tmpList.addAll(showList);
         tmpList.addAll(jinList);

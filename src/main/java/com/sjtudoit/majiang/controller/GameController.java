@@ -125,11 +125,11 @@ public class GameController {
         // 删除用户会话信息
         userMap.remove(this.session.getId());
         System.out.println(userMap);
-	webSocketSet.remove(this);
+	    webSocketSet.remove(this);
         System.out.println(webSocketSet);
-	LOGGER.info("{}下线", name);
+	    LOGGER.info("{}下线", name);
         
-	// 广播用户下线
+	    // 广播用户下线
         currentGame.setMessageType(INFO);
         currentGame.setMessage(name + "退出房间");
         sendMessage(currentGame);
@@ -139,7 +139,8 @@ public class GameController {
     public void onMessage(String str, Session session) throws Exception {
         LOGGER.info("用户{}，信息{}", userMap.get(this.session.getId()), str);
         Message receivedMessage = JSONObject.parseObject(str, new TypeReference<Message<String>>() {});
-        String currentUserName = userMap.get(this.session.getId());
+        // 当前会话的用户名，理论上应该和currentGame.getCurrentUserName相同
+        String sessionUserName = userMap.get(this.session.getId());
 
         // 发送文字消息
         if (receivedMessage.getType().equals(CHAT)) {
@@ -162,12 +163,12 @@ public class GameController {
             List<User> userList = currentGame.getUserList();
             for (int i = 0; i < 4; i++) {
                 User user = userList.get(i);
-                if (currentUserName.equals(user.getUserNickName())) {
+                if (sessionUserName.equals(user.getUserNickName())) {
                     user.setReady(true);
 
                     // 广播通知某某用户已准备
                     currentGame.setMessageType(CLIENT_READY);
-                    currentGame.setMessage(currentUserName);
+                    currentGame.setMessage(sessionUserName);
                     sendMessage(currentGame);
                     if (userList.stream().filter(User::getReady).count() == 4) {
                         // 如果4个人都准备则游戏开始
@@ -187,7 +188,7 @@ public class GameController {
                 // 剩余麻将大于0，说明是接着上一次的游戏继续
                 game = MajiangUtil.newGame(currentGame.getBankerName(), currentGame.getUserList());
             } else {
-                game = MajiangUtil.newGame(currentUserName, currentGame.getUserList());
+                game = MajiangUtil.newGame(sessionUserName, currentGame.getUserList());
             }
             game.setMessageType(START_GAME);
             currentGame = game;
@@ -476,20 +477,17 @@ public class GameController {
 
                 lastUser.removeLastOfOutList();
 
-                User pengUser = userList.stream().filter(user -> user.getUserNickName().equals(currentUserName)).collect(Collectors.toList()).get(0);
-
-                pengUser.addMajiang(currentOutMajiang);
-                pengUser.sortMajiangList();
+                currentUser.addMajiang(currentOutMajiang);
+                currentUser.sortMajiangList();
 
                 // 碰牌，三张牌为一样
-                pengUser.setMajiangPeng(code);
+                currentUser.setMajiangPeng(code);
 
                 currentUser.sortMajiangList();
 
                 // 更新游戏信息
                 userList.set(currentUser.getIndex(), currentUser);
-                userList.set(pengUser.getIndex(), pengUser);
-                currentGame.setCurrentUserName(currentUserName);
+                currentGame.setCurrentUserName(sessionUserName);
                 currentGame.setCurrentInMajiang(null);
                 currentGame.setCurrentOutMajiang(null);
                 currentGame.setNextUserNameList(new ArrayList<>());
@@ -511,12 +509,12 @@ public class GameController {
                 }
 
                 lastUser.removeLastOfOutList();
-                User gangUser = userList.stream().filter(user -> user.getUserNickName().equals(currentUserName)).collect(Collectors.toList()).get(0);
-                gangUser.addMajiang(currentOutMajiang);
-                gangUser.sortMajiangList();
+
+                currentUser.addMajiang(currentOutMajiang);
+                currentUser.sortMajiangList();
 
                 // 碰牌，三张牌为一样
-                gangUser.setMajiangGang(code);
+                currentUser.setMajiangGang(code);
 
                 currentUser.sortMajiangList();
 
@@ -526,11 +524,10 @@ public class GameController {
 
                 // 更新游戏信息
                 currentGame.setRemainMajiangList(remainMajiangList);
-                currentGame.setCurrentUserName(currentUserName);
+                currentGame.setCurrentUserName(sessionUserName);
                 currentGame.setCurrentInMajiang(currentInMajiang);
                 currentGame.setCurrentOutMajiang(null);
                 userList.set(currentUser.getIndex(), currentUser);
-                userList.set(gangUser.getIndex(), gangUser);
                 currentGame.setNextUserNameList(new ArrayList<>());
                 sendMessage(currentGame);
                 break;
@@ -585,79 +582,78 @@ public class GameController {
             case MJ_HU: {
                 String message = (String) receivedMessage.getMessage();
                 Majiang currentOutMajiang = currentGame.getCurrentOutMajiang();
-                User huUser = userList.stream().filter(user -> user.getUserNickName().equals(currentUserName)).collect(Collectors.toList()).get(0);
                 // 庄家
                 User banker = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getBankerName())).collect(Collectors.toList()).get(0);
 
                 if ("抢金".equals(message)) {
                     // 判断是否抢金
-                    List<Majiang> majiangList = huUser.getUserMajiangList();
+                    List<Majiang> majiangList = currentUser.getUserMajiangList();
                     if (majiangList.size() == 16 && MajiangUtil.canHuWithQiangJin(majiangList, currentGame.getJin())) {
-                        huUser.addMajiang(currentGame.getJin());
-                        huUser.sortMajiangList();
+                        currentUser.addMajiang(currentGame.getJin());
+                        currentUser.sortMajiangList();
 
                         // 分数为20+2*(5+花+暗杠数+金)
-                        int moneyNum = MajiangUtil.calculateScore(huUser, "抢金", currentGame);
-                        huUser.setMajiangHu();
+                        int moneyNum = MajiangUtil.calculateScore(currentUser, "抢金", currentGame);
+                        currentUser.setMajiangHu();
 
                         // 更新游戏信息
-                        currentGame.setCurrentUserName(currentUserName);
+                        currentGame.setCurrentUserName(sessionUserName);
                         // 设置下轮庄家名称
-                        currentGame.setBankerName(currentGame.getBankerName().equals(huUser.getUserNickName()) ? huUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
-                        userList.set(huUser.getIndex(), huUser);
-                        MajiangUtil.countScore(userList, huUser, moneyNum);
+                        currentGame.setBankerName(currentGame.getBankerName().equals(currentUser.getUserNickName()) ? currentUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
+                        userList.set(currentUser.getIndex(), currentUser);
+                        MajiangUtil.countScore(userList, currentUser, moneyNum);
                         sendMessage(currentGame);
                     }
                 }
 
-                if (huUser.needAddMajiang()) {
+                if (currentUser.needAddMajiang()) {
                     // 用户的麻将数差1，还需要加一张才能胡
                     LOGGER.info("判断是否平胡");
                     if (currentOutMajiang == null) {
                         System.out.println("当前无出牌，胡牌操作无效");
                         return;
                     }
-                    boolean canHu = MajiangUtil.canHuWithNewMajiang(huUser.getUserMajiangList(), currentOutMajiang);
+                    boolean canHu = MajiangUtil.canHuWithNewMajiang(currentUser.getUserMajiangList(), currentOutMajiang);
                     System.out.println(canHu);
                     if (canHu) {
                         lastUser.removeLastOfOutList();
-                        huUser.addMajiang(currentOutMajiang);
-                        huUser.sortMajiangList();
+                        currentUser.addMajiang(currentOutMajiang);
+                        currentUser.sortMajiangList();
 
                         // 分数为5+花+暗杠数+金
-                        int moneyNum = MajiangUtil.calculateScore(huUser, "平胡", currentGame);
-                        huUser.setMajiangHu();
+                        int moneyNum = MajiangUtil.calculateScore(currentUser, "平胡", currentGame);
+                        currentUser.setMajiangHu();
 
                         // 更新游戏信息
-                        userList.set(huUser.getIndex(), huUser);
-                        MajiangUtil.countScore(userList, huUser, moneyNum);
-                        currentGame.setBankerName(currentGame.getBankerName().equals(huUser.getUserNickName()) ? huUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
+                        userList.set(currentUser.getIndex(), currentUser);
+                        MajiangUtil.countScore(userList, currentUser, moneyNum);
+                        currentGame.setBankerName(currentGame.getBankerName().equals(currentUser.getUserNickName()) ? currentUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
                         currentGame.setCurrentOutMajiang(null);
-                        currentGame.setCurrentUserName(currentUserName);
+                        currentGame.setCurrentUserName(sessionUserName);
                         sendMessage(currentGame);
                     }
                 } else {
                     LOGGER.info("判断是否自摸");
-                    boolean canHu = MajiangUtil.canHu(huUser.getUserMajiangList(), true);
+                    boolean canHu = MajiangUtil.canHu(currentUser.getUserMajiangList(), true);
                     System.out.println(canHu);
                     if (canHu) {
-                        huUser.sortMajiangList();
+                        currentUser.sortMajiangList();
 
                         // 分数为2*（5+花+暗杠数+金+占庄数）
                         int moneyNum;
                         if (currentGame.getCurrentInMajiang() == null) {
                             // 如果是点了吃碰后再点的胡，则currentInMajiang为空，此处算分时应纠正为平胡
-                            moneyNum = MajiangUtil.calculateScore(huUser, "平胡", currentGame);
+                            moneyNum = MajiangUtil.calculateScore(currentUser, "平胡", currentGame);
                         } else {
-                            moneyNum = MajiangUtil.calculateScore(huUser, "自摸", currentGame);
+                            moneyNum = MajiangUtil.calculateScore(currentUser, "自摸", currentGame);
                         }
-                        huUser.setMajiangHu();
+                        currentUser.setMajiangHu();
 
                         // 更新游戏信息
-                        userList.set(huUser.getIndex(), huUser);
-                        MajiangUtil.countScore(userList, huUser, moneyNum);
-                        currentGame.setBankerName(currentGame.getBankerName().equals(huUser.getUserNickName()) ? huUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
-                        currentGame.setCurrentUserName(currentUserName);
+                        userList.set(currentUser.getIndex(), currentUser);
+                        MajiangUtil.countScore(userList, currentUser, moneyNum);
+                        currentGame.setBankerName(currentGame.getBankerName().equals(currentUser.getUserNickName()) ? currentUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
+                        currentGame.setCurrentUserName(sessionUserName);
                         sendMessage(currentGame);
                     }
                 }
