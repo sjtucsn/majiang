@@ -10,10 +10,12 @@ import com.sjtudoit.majiang.dto.User;
 import com.sjtudoit.majiang.utils.MajiangUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.ClassUtils;
 import org.springframework.web.bind.annotation.RestController;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
@@ -47,8 +49,22 @@ public class GameController {
         this.session = session;
         LOGGER.info("用户{}进入房间", name);
         if (userMap.size() == 0) {
-            // 当用户人数为0时重新开始游戏
+            // 当用户人数为0时重新开始游戏，并清空所有音频信息
             currentGame =  new Game(INFO);
+            String filePath = ClassUtils.getDefaultClassLoader().getResource("").getPath() + "static/audio/";
+            try {
+                File file = new File(filePath);
+                if(file.exists()) {
+                    File[] filePaths = file.listFiles();
+                    for(File f : filePaths) {
+                        if(f.isFile()) {
+                            f.delete();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         if (userMap.size() == 4) {
             // 已满4个人
@@ -123,7 +139,14 @@ public class GameController {
         Message receivedMessage = JSONObject.parseObject(str, new TypeReference<Message<String>>() {});
         String currentUserName = userMap.get(this.session.getId());
 
+        // 发送文字消息
         if (receivedMessage.getType().equals(CHAT)) {
+            sendMessage(receivedMessage);
+            return;
+        }
+
+        // 发送语音消息
+        if (receivedMessage.getType().equals(AUDIO_CHAT)) {
             sendMessage(receivedMessage);
             return;
         }

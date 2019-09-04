@@ -24,4 +24,5 @@ public class MessageType {
     public final static int INFO= 19;
     public final static int GAME_OVER = 20;
     public final static int CHAT = 101;
+    public final static int AUDIO_CHAT = 102;
 }
