@@ -698,8 +698,10 @@ public class GameController {
     public void sendMessage(Game game) throws Exception {
         for (GameController gameController : webSocketSet) {
             if (gameController.session.isOpen()) {
-                // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
-                gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(game, SerializerFeature.DisableCircularReferenceDetect));
+                synchronized (gameController.session.getId()) {
+                    // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
+                    gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(game, SerializerFeature.DisableCircularReferenceDetect));
+                }
             }
         }
     }
@@ -712,8 +714,10 @@ public class GameController {
     public void sendMessage(Message message) throws Exception {
         for (GameController gameController : webSocketSet) {
             if (gameController.session.isOpen()) {
-                // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
-                gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(message, SerializerFeature.DisableCircularReferenceDetect));
+                synchronized (gameController.session.getId()) {
+                    // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
+                    gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(message, SerializerFeature.DisableCircularReferenceDetect));
+                }
             }
         }
     }

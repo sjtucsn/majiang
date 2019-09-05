@@ -211,6 +211,11 @@ public class MajiangUtil {
         return false;
     }
 
+    /**
+     * 判断麻将能否能胡
+     * @param majiangCodes 麻将code数组
+     * @return true/false
+     */
     public static boolean canHuWithQue(List<Integer> majiangCodes) {
         if (majiangCodes.size() == 2) {
             if (majiangCodes.get(0).equals(majiangCodes.get(1))) {
@@ -233,6 +238,11 @@ public class MajiangUtil {
         }
     }
 
+    /**
+     * 判断麻将去掉雀后能否能胡
+     * @param majiangCodes 麻将code数组
+     * @return true/false
+     */
     public static boolean canHuWithoutQue(List<Integer> majiangCodes) {
         if (majiangCodes.size() == 0) {
             return true;

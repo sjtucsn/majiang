@@ -26,7 +26,7 @@ public class Game {
 
     private Majiang jin;
 
-    // 游戏开始时有刚进的麻将
+    // 游戏开始时有刚进的麻将，方便前端手牌显示区分开
     private Majiang currentInMajiang = new Majiang();
 
     // 庄家名称
