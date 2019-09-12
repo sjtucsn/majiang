@@ -48,25 +48,7 @@ public class GameController {
     public void onOpen(Session session, @PathParam("name") String name) throws Exception {
         this.session = session;
         LOGGER.info("用户{}进入房间", name);
-        if (userMap.size() == 0) {
-            // 当用户人数为0时重新开始游戏，并清空所有音频信息
-            currentGame =  new Game(INFO);
-            String filePath = ClassUtils.getDefaultClassLoader().getResource("").getPath() + "static/audio/";
-            try {
-                File file = new File(filePath);
-                if(file.exists()) {
-                    File[] filePaths = file.listFiles();
-                    for(File f : filePaths) {
-                        if(f.isFile()) {
-                            f.delete();
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        if (userMap.size() == 4) {
+        /*if (userMap.size() == 4) {
             // 已满4个人
             LOGGER.info("房间人数已满！");
             // 向当前会话通知房间人数已满
@@ -87,25 +69,11 @@ public class GameController {
             // 防止用户多次准备
             LOGGER.info("该用户已存在. name={}", name);
             return;
-        }
+        }*/
 
         // 添加用户会话信息
         userMap.put(this.session.getId(), name);
         webSocketSet.add(this);
-
-        // 将用户加入牌桌
-        List<User> userList = currentGame.getUserList();
-        for (int i = 0; i < 4; i++) {
-            User user = userList.get(i);
-            if (user.getUserNickName() == null || name.equals(user.getUserNickName())) {
-                user.setIndex(i);
-                user.setUserNickName(name);
-                break;
-            }
-        }
-        // 广播用户进入房间
-        currentGame.setMessageType(INFO);
-        currentGame.setMessage(name + "进入房间");
         sendMessage(currentGame);
         LOGGER.info(userMap.toString());
     }
@@ -119,6 +87,11 @@ public class GameController {
             if (name.equals(user.getUserNickName())) {
                 user.setUserNickName(null);
                 user.setReady(false);
+                // 广播用户下线
+                currentGame.setMessageType(INFO);
+                currentGame.setMessage(name + "退出房间");
+                sendMessage(currentGame);
+                break;
             }
         }
 
@@ -128,11 +101,6 @@ public class GameController {
 	    webSocketSet.remove(this);
         System.out.println(webSocketSet);
 	    LOGGER.info("{}下线", name);
-        
-	    // 广播用户下线
-        currentGame.setMessageType(INFO);
-        currentGame.setMessage(name + "退出房间");
-        sendMessage(currentGame);
     }
 
     @OnMessage
@@ -158,6 +126,86 @@ public class GameController {
             // 心跳包不响应
             return;
         }
+
+        // 获取当前游戏信息
+        if (receivedMessage.getType().equals(GET_GAME)) {
+            session.getBasicRemote().sendText(JSONObject.toJSONString(currentGame, SerializerFeature.DisableCircularReferenceDetect));
+            return;
+        }
+
+        // 玩家退出
+        if (receivedMessage.getType().equals(QUIT)) {
+            // 用户下线前删除牌桌内的信息
+            List<User> userList = currentGame.getUserList();
+            for (int i = 0; i < 4; i++) {
+                User user = userList.get(i);
+                if (sessionUserName.equals(user.getUserNickName())) {
+                    user.setUserNickName(null);
+                    user.setReady(false);
+                    break;
+                }
+            }
+
+            // 广播用户下线
+            currentGame.setMessageType(INFO);
+            currentGame.setMessage(sessionUserName + "退出房间");
+            sendMessage(currentGame);
+
+            // 当用户人数为0时重新开始游戏，并清空所有音频信息
+            if (currentGame.getUserList().stream().noneMatch(user -> user.getUserNickName() != null)) {
+                currentGame =  new Game(INFO);
+                String filePath = ClassUtils.getDefaultClassLoader().getResource("").getPath() + "static/audio/";
+                try {
+                    File file = new File(filePath);
+                    if(file.exists()) {
+                        File[] filePaths = file.listFiles();
+                        for(File f : filePaths) {
+                            if(f.isFile()) {
+                                f.delete();
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            return;
+        }
+
+        // 玩家进入，选座位
+        if (receivedMessage.getType().equals(CHOOSE_SEAT)) {
+            // 将用户加入牌桌
+            String position = (String) receivedMessage.getMessage();
+            List<User> userList = currentGame.getUserList();
+
+            if (userList.stream().filter(user -> user.getUserNickName() != null).count() == 4) {
+                // 如果牌桌上已经有4个人，则选择座位无效（防止机器人自动准备）
+                return;
+            }
+
+            if (position == null) {
+                for (int i = 0; i < 4; i++) {
+                    User user = userList.get(i);
+                    if (user.getUserNickName() == null || sessionUserName.equals(user.getUserNickName())) {
+                        user.setIndex(i);
+                        user.setUserNickName(sessionUserName);
+                        break;
+                    }
+                }
+            } else {
+                User user = userList.get(Integer.valueOf(position));
+                if (user.getUserNickName() == null || sessionUserName.equals(user.getUserNickName())) {
+                    user.setIndex(Integer.valueOf(position));
+                    user.setUserNickName(sessionUserName);
+                }
+            }
+            // 广播用户进入房间
+            currentGame.setMessageType(INFO);
+            currentGame.setMessage(sessionUserName + "进入房间");
+            sendMessage(currentGame);
+            return;
+        }
+
         // 响应准备操作
         if (receivedMessage.getType().equals(CLIENT_READY)) {
             List<User> userList = currentGame.getUserList();
@@ -206,7 +254,13 @@ public class GameController {
         // 当前玩家列表
         List<User> userList = currentGame.getUserList();
         // 当前轮到的玩家
-        User currentUser = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getCurrentUserName())).collect(Collectors.toList()).get(0);
+        User currentUser;
+        List<User> list = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getCurrentUserName())).collect(Collectors.toList());
+        if (list.size() > 0) {
+            currentUser = list.get(0);
+        } else {
+            return;
+        }
         // 按照座位顺序应该轮到的玩家
         User physicalNextUser;
         // 上一个出牌的玩家
@@ -298,7 +352,7 @@ public class GameController {
                     for (int i = 1; i <= 4; i++) {
                         User user = userList.get((banker.getIndex() + i) % 4);
                         if (user.getCanQiangJin()) {
-                            // 依次判断是否能抢金，并确定抢金顺序
+                            // 依次判断是否能抢金，并确定抢金顺序，若都能抢金，则庄家最后抢
                             nextUserNameList.add(user.getUserNickName());
                         }
                     }
@@ -586,22 +640,23 @@ public class GameController {
                 User banker = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getBankerName())).collect(Collectors.toList()).get(0);
 
                 if ("抢金".equals(message)) {
-                    // 判断是否抢金
-                    List<Majiang> majiangList = currentUser.getUserMajiangList();
+                    // 判断是否抢金，由于庄家抢金时不按顺序来
+                    User qiangJinUser = userList.stream().filter(user -> user.getUserNickName().equals(sessionUserName)).collect(Collectors.toList()).get(0);
+                    List<Majiang> majiangList = qiangJinUser.getUserMajiangList();
                     if (majiangList.size() == 16 && MajiangUtil.canHuWithQiangJin(majiangList, currentGame.getJin())) {
-                        currentUser.addMajiang(currentGame.getJin());
-                        currentUser.sortMajiangList();
+                        qiangJinUser.addMajiang(currentGame.getJin());
+                        qiangJinUser.sortMajiangList();
 
                         // 分数为20+2*(5+花+暗杠数+金)
-                        int moneyNum = MajiangUtil.calculateScore(currentUser, "抢金", currentGame);
-                        currentUser.setMajiangHu();
+                        int moneyNum = MajiangUtil.calculateScore(qiangJinUser, "抢金", currentGame);
+                        qiangJinUser.setMajiangHu();
 
                         // 更新游戏信息
                         currentGame.setCurrentUserName(sessionUserName);
                         // 设置下轮庄家名称
-                        currentGame.setBankerName(currentGame.getBankerName().equals(currentUser.getUserNickName()) ? currentUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
-                        userList.set(currentUser.getIndex(), currentUser);
-                        MajiangUtil.countScore(userList, currentUser, moneyNum);
+                        currentGame.setBankerName(currentGame.getBankerName().equals(qiangJinUser.getUserNickName()) ? qiangJinUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
+                        userList.set(qiangJinUser.getIndex(), qiangJinUser);
+                        MajiangUtil.countScore(userList, qiangJinUser, moneyNum);
                         sendMessage(currentGame);
                     }
                 }

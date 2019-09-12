@@ -1,6 +1,9 @@
 package com.sjtudoit.majiang.constant;
 
 public class MessageType {
+    public final static int QUIT = -4;
+    public final static int GET_GAME = -3;
+    public final static int CHOOSE_SEAT = -2;
     public final static int HEART_BEAT = -1;
     public final static int CLIENT_READY = 0;
     public final static int START_GAME = 1;
