@@ -298,6 +298,11 @@ public class GameController {
                     // 大家补花完了，直接轮到庄家
                     currentGame.setCurrentUserName(currentGame.getBankerName());
 
+                    // 如果说已经开金，则不允许再次开金，该请求无效（防止因为网络问题多次请求造成多次开金）
+                    if (currentGame.getJin() != null) {
+                        return;
+                    }
+
                     // 开金
                     Majiang jin = remainMajiangList.remove(0);
                     User banker = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getBankerName())).collect(Collectors.toList()).get(0);
