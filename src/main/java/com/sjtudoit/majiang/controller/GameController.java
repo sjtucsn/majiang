@@ -445,6 +445,7 @@ public class GameController {
             case MJ_IN: {
                 // 判断是否和局
                 if (remainMajiangList.size() <= 16) {
+                    currentGame.setCurrentInMajiang(null);
                     currentGame.setMessageType(MJ_TIE);
                     MajiangUtil.countTie(userList);
                     sendMessage(currentGame);
@@ -469,6 +470,7 @@ public class GameController {
             case MJ_ADD_FLOWER: {
                 // 判断是否和局
                 if (remainMajiangList.size() <= 16) {
+                    currentGame.setCurrentInMajiang(null);
                     currentGame.setMessageType(MJ_TIE);
                     MajiangUtil.countTie(userList);
                     sendMessage(currentGame);
