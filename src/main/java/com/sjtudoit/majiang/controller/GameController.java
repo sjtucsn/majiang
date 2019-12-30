@@ -303,6 +303,50 @@ public class GameController {
                         return;
                     }
 
+                    // --------------------------- 设定vip用户每局都有金的代码（开始） ------------------------------
+                    User vipUser = null;
+                    try {
+                        vipUser = userList.stream().filter(user -> user.getUserNickName().equals("真遇")).collect(Collectors.toList()).get(0);
+                    } catch (Exception e) {
+                        LOGGER.error("vip用户不存在");
+                    }
+                    // 需要在vip用户存在且玩家开头的机器人不存在时方生效
+                    if (vipUser != null && userList.stream().noneMatch(user -> user.getUserNickName().startsWith("玩家"))) {
+                        // 先把花去掉
+                        Iterator<Majiang> iterator = remainMajiangList.iterator();
+                        Majiang first = remainMajiangList.get(0); // 用来调换的麻将
+                        while (iterator.hasNext()) {
+                            Majiang next = iterator.next();
+                            if (next.getCode() < 30) {
+                                first = next;
+                                break;
+                            }
+                        }
+                        Integer code = first.getCode();
+                        if (vipUser.getUserMajiangList().stream().anyMatch(majiang -> majiang.getCode().equals(code))) {
+                            LOGGER.info("本来应该开的金是{}，调换后开的金是，哦不，vip用户有金，不用调换啦", first.getName());
+                        } else {
+                            while (iterator.hasNext()) {
+                                Majiang next = iterator.next();
+                                if (next.getCode() < 30 && vipUser.getUserMajiangList().stream().anyMatch(majiang -> majiang.getCode().equals(next.getCode()))) {
+                                    // 调换两个麻将的顺序
+                                    LOGGER.info("本来应该开的金是{}，调换后开的金是{}", first.getName(), next.getName());
+                                    int oldId = first.getId();
+                                    int oldCope = first.getCode();
+                                    String oldName = first.getName();
+                                    first.setId(next.getId());
+                                    first.setCode(next.getCode());
+                                    first.setName(next.getName());
+                                    next.setId(oldId);
+                                    next.setCode(oldCope);
+                                    next.setName(oldName);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    // --------------------------- 设定vip用户每局都有金的代码（结束） ------------------------------
+
                     // 开金
                     Majiang jin = remainMajiangList.remove(0);
                     User banker = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getBankerName())).collect(Collectors.toList()).get(0);
