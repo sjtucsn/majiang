@@ -38,6 +38,9 @@ public class Game {
     // 如果潜在对象都过，则物理位置上的下家应该为nextUserName
     private String physicalNextUserName;
 
+    public Game() {
+    }
+
     public Game(Integer messageType) {
         this.messageType = messageType;
     }
@@ -163,5 +166,23 @@ public class Game {
             User user = userList.get(i);
             user.setReady(false);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Game{" +
+                "messageType=" + messageType +
+                ", message='" + message + '\'' +
+                ", messageUserName='" + messageUserName + '\'' +
+                ", userList=" + userList +
+                ", remainMajiangList=" + remainMajiangList +
+                ", currentUserName='" + currentUserName + '\'' +
+                ", currentOutMajiang=" + currentOutMajiang +
+                ", jin=" + jin +
+                ", currentInMajiang=" + currentInMajiang +
+                ", bankerName='" + bankerName + '\'' +
+                ", nextUserNameList=" + nextUserNameList +
+                ", physicalNextUserName='" + physicalNextUserName + '\'' +
+                '}';
     }
 }

@@ -1,8 +1,9 @@
 package com.sjtudoit.majiang.controller;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.sjtudoit.majiang.client.MajiangClient;
 import com.sjtudoit.majiang.dto.Game;
 import com.sjtudoit.majiang.dto.Majiang;
 import com.sjtudoit.majiang.dto.Message;
@@ -16,6 +17,8 @@ import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.File;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
@@ -39,6 +42,9 @@ public class GameController {
     // 当前用户Map
     private static Map<String, String> userMap = new HashMap<>();
 
+    // 当前机器人Map
+    private static Map<String, MajiangClient> robotMap= new HashMap<>();
+
     // 与某个客户端的连接会话，需要通过它来与客户端进行数据收发
     private Session session;
 
@@ -48,29 +54,6 @@ public class GameController {
     public void onOpen(Session session, @PathParam("name") String name) throws Exception {
         this.session = session;
         LOGGER.info("用户{}进入房间", name);
-        /*if (userMap.size() == 4) {
-            // 已满4个人
-            LOGGER.info("房间人数已满！");
-            // 向当前会话通知房间人数已满
-            currentGame.setMessageType(INFO);
-            currentGame.setMessage("房间人数已满");
-            session.getBasicRemote().sendText(JSONObject.toJSONString(currentGame, SerializerFeature.DisableCircularReferenceDetect));
-
-            // 广播通知某某用户进入房间
-            currentGame.setMessage(name + "进入房间");
-            sendMessage(currentGame);
-
-            // 2s后关闭当前会话
-            Thread.sleep(2000);
-            session.close();
-            return;
-        }
-        if (userMap.values().contains(name)) {
-            // 防止用户多次准备
-            LOGGER.info("该用户已存在. name={}", name);
-            return;
-        }*/
-
         // 添加用户会话信息
         userMap.put(this.session.getId(), name);
         webSocketSet.add(this);
@@ -97,18 +80,40 @@ public class GameController {
 
         // 删除用户会话信息
         userMap.remove(this.session.getId());
-        System.out.println(userMap);
 	    webSocketSet.remove(this);
+	    robotMap.remove(this.session.getId());
+        System.out.println(userMap);
         System.out.println(webSocketSet);
-	    LOGGER.info("{}下线", name);
+        LOGGER.info("{}下线", name);
+
+        // 若场内只有机器人，则关闭所有连接
+        if (userMap.values().stream().allMatch(value -> value.startsWith("玩家"))) {
+            for (GameController gameController : webSocketSet) {
+                gameController.session.close();
+            }
+        }
     }
 
     @OnMessage
     public void onMessage(String str, Session session) throws Exception {
         LOGGER.info("用户{}，信息{}", userMap.get(this.session.getId()), str);
-        Message receivedMessage = JSONObject.parseObject(str, new TypeReference<Message<String>>() {});
+        Message receivedMessage = JSON.parseObject(str, Message.class);
         // 当前会话的用户名，理论上应该和currentGame.getCurrentUserName相同
         String sessionUserName = userMap.get(this.session.getId());
+
+        // 添加机器人
+        if (receivedMessage.getType().equals(ADD_ROBOT)) {
+            if (userMap.size() >= 4) {
+                return;
+            }
+            WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+            String robotName = "玩家" + (robotMap.size() + 1);
+            MajiangClient client = new MajiangClient(robotName);
+            container.connectToServer(client, new URI("ws://192.168.2.170:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
+            robotMap.put(client.getSession().getId(), client);
+            client.send(new Message(CHOOSE_SEAT));
+            return;
+        }
 
         // 发送文字消息
         if (receivedMessage.getType().equals(CHAT)) {
@@ -243,7 +248,7 @@ public class GameController {
 
             // 游戏开始后设置全体用户状态为未准备，方便前端显示，等下次准备时再设为已准备
             currentGame.setUnReady();
-            sendMessage(game);
+            sendMessage(currentGame);
             return;
         }
 
@@ -271,6 +276,11 @@ public class GameController {
             lastUser = userList.get((physicalNextUser.getIndex() + 4 - 1) % 4);
         }
 
+        if (currentGame.getMessageType() >= HU_PING_HU && currentGame.getMessageType() <= GAME_OVER &&
+                receivedMessage.getType() >= RESET_FLOWER && receivedMessage.getType() <= PASS) {
+            // 如果走到这一步当前局已结束，则不执行后续逻辑，防止用户时间差引发的错误
+            return;
+        }
         // 根据发送的指令信息响应同样的信息类型
         currentGame.setMessageType(receivedMessage.getType());
         switch (receivedMessage.getType()) {
@@ -535,7 +545,7 @@ public class GameController {
                 break;
             }
             case MJ_CHI: {
-                String eatIds = (String) receivedMessage.getMessage();
+                String eatIds = receivedMessage.getMessage();
                 String[] ids = eatIds.split(" ");
                 Integer id1 = Integer.valueOf(ids[0]);
                 Integer id2 = Integer.valueOf(ids[1]);
@@ -638,7 +648,7 @@ public class GameController {
                 break;
             }
             case MJ_AN_GANG: {
-                String code = (String) receivedMessage.getMessage();
+                String code = receivedMessage.getMessage();
 
                 // 防止网络不好时误操作
                 if (currentUser.getUserMajiangList().stream().filter(majiang -> majiang.isAnGang() && majiang.getCode().equals(Integer.valueOf(code))).count() == 4) {
@@ -657,12 +667,13 @@ public class GameController {
                 // 更新游戏信息
                 currentGame.setRemainMajiangList(remainMajiangList);
                 currentGame.setCurrentInMajiang(currentInMajiang);
+                currentGame.setCurrentOutMajiang(null);
                 userList.set(currentUser.getIndex(), currentUser);
                 sendMessage(currentGame);
                 break;
             }
             case MJ_JIA_GANG: {
-                String code = (String) receivedMessage.getMessage();
+                String code = receivedMessage.getMessage();
 
                 // 防止网络不好时误操作
                 if (currentUser.getUserMajiangList().stream().filter(majiang -> majiang.isShow() && majiang.getCode().equals(Integer.valueOf(code))).count() == 4) {
@@ -680,12 +691,13 @@ public class GameController {
                 // 更新游戏信息
                 currentGame.setRemainMajiangList(remainMajiangList);
                 userList.set(currentUser.getIndex(), currentUser);
+                currentGame.setCurrentOutMajiang(null);
                 currentGame.setCurrentInMajiang(currentInMajiang);
                 sendMessage(currentGame);
                 break;
             }
             case MJ_HU: {
-                String message = (String) receivedMessage.getMessage();
+                String message = receivedMessage.getMessage();
                 Majiang currentOutMajiang = currentGame.getCurrentOutMajiang();
                 // 庄家
                 User banker = userList.stream().filter(user -> user.getUserNickName().equals(currentGame.getBankerName())).collect(Collectors.toList()).get(0);
