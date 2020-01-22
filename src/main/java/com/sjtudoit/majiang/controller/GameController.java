@@ -854,6 +854,7 @@ public class GameController {
                 break;
             }
             case GAME_OVER: {
+                currentGame.setJin(null);
                 currentGame.setGameStarted(false);
                 sendMessage(currentGame);
                 break;
