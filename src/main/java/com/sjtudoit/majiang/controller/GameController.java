@@ -73,8 +73,8 @@ public class GameController {
         if (robotClient != null) {
             robotClientSet.remove(robotClient);
         }
-        if (currentGame.getMessageType() != GAME_OVER && currentGame.getMessageType() != CLIENT_READY) {
-            // 发生异常情况中止连接时，切换为托管模式
+        if (currentGame.getGameStarted()) {
+            // 游戏正在进行中发生异常情况中止连接时，切换为托管模式
             if (userMap.containsValue(name)) {
                 // 如果还有叫该用户的人，说明是玩家掉线后回来，则不启动新机器人
                 LOGGER.info("当前局面有{}用户存在，故不进入托管模式，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
@@ -86,6 +86,11 @@ public class GameController {
             MajiangClient client = new MajiangClient(robotName);
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
+            for (User user : currentGame.getUserList()) {
+                if (user.getUserNickName().equals(robotName)) {
+                    user.setRobotPlay(true);
+                }
+            }
             LOGGER.info("{}异常退出，改为托管模式，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}}", name, userMap, robotClientSet, webSocketSet);
             return;
         }
@@ -174,8 +179,7 @@ public class GameController {
             for (int i = 0; i < 4; i++) {
                 User user = userList.get(i);
                 if (sessionUserName.equals(user.getUserNickName())) {
-                    if (currentGame.getCurrentUserName() == null || currentGame.getMessageType() == GAME_OVER || currentGame.getMessageType() == CLIENT_READY) {
-                        // 用户正常退出
+                    if (!currentGame.getGameStarted()) {
                         user.setReady(false);
                         user.setUserNickName("");
                         break;
@@ -228,6 +232,11 @@ public class GameController {
                 }
             }
             if (resume) {
+                for (User user : currentGame.getUserList()) {
+                    if (user.getUserNickName().equals(sessionUserName)) {
+                        user.setRobotPlay(false);
+                    }
+                }
                 LOGGER.info("{}重新回到房间选择座位，当前的userMap是{}，\r\n robotClientSet是{}, \r\n websocketSet是{}", sessionUserName, userMap, robotClientSet, webSocketSet);
                 currentGame.setMessageType(INFO);
                 currentGame.setMessage(sessionUserName + "进入房间");
@@ -295,6 +304,7 @@ public class GameController {
                 game = MajiangUtil.newGame(sessionUserName, currentGame.getUserList());
             }
             game.setMessageType(START_GAME);
+            game.setGameStarted(true);
             currentGame = game;
 
             // 游戏开始后设置全体用户状态为未准备，方便前端显示，等下次准备时再设为已准备
@@ -327,9 +337,8 @@ public class GameController {
             lastUser = userList.get((physicalNextUser.getIndex() + 4 - 1) % 4);
         }
 
-        if (currentGame.getMessageType() >= HU_PING_HU && currentGame.getMessageType() <= GAME_OVER && currentGame.getMessageType() != INFO &&
-                receivedMessage.getType() >= RESET_FLOWER && receivedMessage.getType() <= PASS) {
-            // 如果走到这一步当前局已结束，则不执行后续逻辑，防止用户时间差引发的错误
+        if (!currentGame.getGameStarted()) {
+            // 如果走到这一步当前局已结束，则不执行后续逻辑
             return;
         }
         // 根据发送的指令信息响应同样的信息类型
@@ -488,7 +497,7 @@ public class GameController {
                     return;
                 }
                 // 用户出牌
-                String index = (String) receivedMessage.getMessage();
+                String index = receivedMessage.getMessage();
                 Majiang currentOutMajiang = currentUser.removeMajiang(Integer.valueOf(index));
 
                 currentUser.sortMajiangList();
@@ -567,8 +576,7 @@ public class GameController {
 
                 currentGame.setRemainMajiangList(remainMajiangList);
                 currentGame.setCurrentInMajiang(currentInMajiang);
-                // 此处不设置上一张出牌为空，有出牌时说明不在补花阶段
-                // currentGame.setCurrentOutMajiang(null);
+                currentGame.setCurrentOutMajiang(null);
                 sendMessage(currentGame);
                 break;
             }
@@ -846,8 +854,7 @@ public class GameController {
                 break;
             }
             case GAME_OVER: {
-                // 游戏结束时设置金为空，方便前端判断游戏是否正在进行中，若金为空则需要前端准备
-                currentGame.setJin(null);
+                currentGame.setGameStarted(false);
                 sendMessage(currentGame);
                 break;
             }

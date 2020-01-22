@@ -38,6 +38,9 @@ public class Game {
     // 如果潜在对象都过，则物理位置上的下家应该为nextUserName
     private String physicalNextUserName;
 
+    // 游戏状态
+    private Boolean gameStarted = false;
+
     public Game() {
     }
 
@@ -166,6 +169,14 @@ public class Game {
             User user = userList.get(i);
             user.setReady(false);
         }
+    }
+
+    public Boolean getGameStarted() {
+        return gameStarted;
+    }
+
+    public void setGameStarted(Boolean gameStarted) {
+        this.gameStarted = gameStarted;
     }
 
     @Override

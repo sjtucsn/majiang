@@ -17,7 +17,7 @@ public class User {
     private Boolean ready = false; // 是否已准备
     private Integer score = 100; // 分数，默认一开始都是100
     private Integer scoreChange = 0; // 分数变化
-    private Integer stayNum = 0; // 占庄数
+    private Boolean robotPlay = false; // 是否处于托管状态
 
     private List<Majiang> userMajiangList = new ArrayList<>();
     private List<Majiang> outList = new ArrayList<>();
@@ -304,12 +304,12 @@ public class User {
         this.score = score;
     }
 
-    public Integer getStayNum() {
-        return stayNum;
+    public Boolean getRobotPlay() {
+        return robotPlay;
     }
 
-    public void setStayNum(Integer stayNum) {
-        this.stayNum = stayNum;
+    public void setRobotPlay(Boolean robotPlay) {
+        this.robotPlay = robotPlay;
     }
 
     @Override
@@ -326,7 +326,7 @@ public class User {
                 ", ready=" + ready +
                 ", score=" + score +
                 ", scoreChange=" + scoreChange +
-                ", stayNum=" + stayNum +
+                ", robotPlay=" + robotPlay +
                 ", userMajiangList=" + userMajiangList +
                 ", outList=" + outList +
                 ", flowerList=" + flowerList +

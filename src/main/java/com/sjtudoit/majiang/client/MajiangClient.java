@@ -55,7 +55,8 @@ public class MajiangClient {
         if (game.getMessageType() >= MessageType.HU_PING_HU && game.getMessageType() <= MessageType.MJ_TIE) {
             // 本局游戏结束
             ready = false;
-            send(new Message(MessageType.GAME_OVER));
+            // 机器人不发送游戏结束指令，由玩家发送即可
+            // send(new Message(MessageType.GAME_OVER));
             return;
         }
 
