@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class User {
-    private String userNickName;
+    private String userNickName = "";
     private Integer index;
     private Boolean canChi;
     private Boolean canPeng;

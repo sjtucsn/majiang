@@ -23,6 +23,7 @@ public class MajiangClient {
     private String name;
     private User user;
     private Game game;
+    private boolean ready = false;
 
     public MajiangClient(String name) {
         this.name = name;
@@ -30,14 +31,14 @@ public class MajiangClient {
 
     @OnOpen
     public void open(Session session) {
-        logger.info(this.name + "连接建立");
+        logger.info(this.name + "机器人连接建立");
         // 设置websocket传输text数据的缓冲大小，否则传数据时连接可能异常关闭（一条game数据大约为10000字节）
         session.setMaxTextMessageBufferSize(15000);
         this.session = session;
     }
 
     @OnMessage
-    public void onMessage(String message) throws Exception{
+    public void onMessage(String message) throws Exception {
         game = JSON.parseObject(message, Game.class);
         if (game.getMessageType() == null) {
             return;
@@ -52,7 +53,9 @@ public class MajiangClient {
             return;
         }
         if (game.getMessageType() >= MessageType.HU_PING_HU && game.getMessageType() <= MessageType.MJ_TIE) {
-            // 本局游戏结果数据无需响应
+            // 本局游戏结束
+            ready = false;
+            send(new Message(MessageType.GAME_OVER));
             return;
         }
 
@@ -66,9 +69,10 @@ public class MajiangClient {
             return;
         }
 
-        if (game.getMessageType().equals(MessageType.GAME_OVER) && !user.getReady()) {
+        if (game.getMessageType().equals(MessageType.GAME_OVER) && !ready) {
             // 一局游戏结束后自动准备
             Thread.sleep(200 + new Random().nextInt(300));
+            ready = true;
             send(new Message(MessageType.CLIENT_READY, "准备"));
             return;
         }
@@ -179,7 +183,7 @@ public class MajiangClient {
 
     @OnClose
     public void onClose() throws Exception{
-        logger.info(name + "连接关闭");
+        logger.info(name + "连接关闭，id是" + session.getId());
     }
 
     /**
@@ -188,7 +192,9 @@ public class MajiangClient {
      */
     public void send(Message message) {
         try {
-            this.session.getBasicRemote().sendText(JSONObject.toJSONString(message, SerializerFeature.DisableCircularReferenceDetect));
+            if (this.session.isOpen()) {
+                this.session.getBasicRemote().sendText(JSONObject.toJSONString(message, SerializerFeature.DisableCircularReferenceDetect));
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -196,6 +202,10 @@ public class MajiangClient {
 
     public Session getSession() {
         return session;
+    }
+
+    public String getName() {
+        return name;
     }
 
     /**
@@ -517,5 +527,25 @@ public class MajiangClient {
             }
         }
         return tmpList;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        MajiangClient that = (MajiangClient) o;
+        return Objects.equals(name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name);
+    }
+
+    @Override
+    public String toString() {
+        return "MajiangClient{" +
+                "session=" + (session == null ? -1 : session.getId()) + " " + name +
+                '}';
     }
 }

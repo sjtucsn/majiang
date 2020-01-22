@@ -133,12 +133,14 @@ public class MajiangUtil {
         List<Majiang> tmpMajiangList = new ArrayList<>(userMajiangList);
         tmpMajiangList.add(newMajiang);
         boolean canHu = canHu(tmpMajiangList, false);
-        System.out.println();
         return canHu;
     }
 
 
     public static boolean canHuWithNewMajiang(List<Majiang> userMajiangList, Majiang newMajiang) {
+        if (newMajiang == null || newMajiang.getCode() == null) {
+            return false;
+        }
         List<Majiang> tmpMajiangList = new ArrayList<>(userMajiangList);
         tmpMajiangList.add(newMajiang);
         boolean canHu = canHu(tmpMajiangList, true);
