@@ -3,6 +3,7 @@ package com.sjtudoit.majiang.controller;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
+import com.sjtudoit.majiang.client.AIMajiangClient;
 import com.sjtudoit.majiang.client.MajiangClient;
 import com.sjtudoit.majiang.dto.Game;
 import com.sjtudoit.majiang.dto.Majiang;
@@ -83,7 +84,7 @@ public class GameController {
             // 创建托管AI
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             String robotName = name;
-            MajiangClient client = new MajiangClient(robotName);
+            MajiangClient client = new AIMajiangClient(robotName);
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
             for (User user : currentGame.getUserList()) {
@@ -140,7 +141,7 @@ public class GameController {
             }
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             String robotName = "玩家" + (robotClientSet.size() + 1);
-            MajiangClient client = new MajiangClient(robotName);
+            MajiangClient client = new AIMajiangClient(robotName);
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
             client.send(new Message(CHOOSE_SEAT));

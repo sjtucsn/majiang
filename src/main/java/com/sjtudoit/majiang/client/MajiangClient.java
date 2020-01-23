@@ -21,9 +21,12 @@ public class MajiangClient {
     private static Logger logger = LoggerFactory.getLogger(MajiangClient.class);
     private Session session;
     private String name;
-    private User user;
-    private Game game;
+    protected User user;
+    protected Game game;
     private boolean ready = false;
+
+    public MajiangClient() {
+    }
 
     public MajiangClient(String name) {
         this.name = name;
@@ -213,14 +216,14 @@ public class MajiangClient {
      * 处理吃牌逻辑
      * @return 是否吃
      */
-    private boolean handleChi() {
+    protected boolean handleChi() {
         if (game.getCurrentOutMajiang() == null) {
             return false;
         }
         int currentOutMjCode = game.getCurrentOutMajiang().getCode();
         List<Majiang> mjBottomArray = user.getUserMajiangList().stream().filter(majiang -> !majiang.isJin() && !majiang.isAnGang() && !majiang.isShow()).collect(Collectors.toList());
         // 对于任意一张麻将code，判断code-3,code和code+3是否存在，如果存在就不吃
-        List<Integer> canEatMjCodeArray = mjBottomArray.stream().map(Majiang::getCode).filter(code -> code - currentOutMjCode <=2 || code - currentOutMjCode >= 2).collect(Collectors.toList());
+        List<Integer> canEatMjCodeArray = mjBottomArray.stream().map(Majiang::getCode).filter(code -> code - currentOutMjCode <= 2 || code - currentOutMjCode >= 2).collect(Collectors.toList());
         List<Integer> mjBottomCodeArray = mjBottomArray.stream().map(Majiang::getCode).collect(Collectors.toList());
         int mjId1 = 0, mjId2 = 0;
         if (canEatMjCodeArray.contains(currentOutMjCode - 2) && canEatMjCodeArray.contains(currentOutMjCode - 1) &&
@@ -255,7 +258,7 @@ public class MajiangClient {
      * 处理碰牌逻辑
      * @return 是否碰
      */
-    private boolean handlePeng() {
+    protected boolean handlePeng() {
         if (game.getCurrentOutMajiang() == null) {
             return false;
         }
@@ -290,7 +293,7 @@ public class MajiangClient {
      * 处理杠牌代码
      * @return 是否杠
      */
-    private boolean handleGang() {
+    protected boolean handleGang() {
         if (game.getCurrentOutMajiang() == null) {
             return false;
         }
@@ -324,7 +327,7 @@ public class MajiangClient {
      * 判断是否暗杠
      * @return 返回将要暗杠的牌的编号，若不暗杠则返回-1
      */
-    private int handleAnGang() {
+    protected int handleAnGang() {
         List<Integer> mjBottomCodeArray = user.getUserMajiangList().stream().filter(majiang -> !majiang.isJin() && !majiang.isAnGang() && !majiang.isShow()).map(Majiang::getCode).sorted(Integer::compareTo).collect(Collectors.toList());
         if (mjBottomCodeArray.size() < 4) {
             return -1;
@@ -344,7 +347,7 @@ public class MajiangClient {
      * 判断是否加杠
      * @return 返回将要加杠的牌的编号，若不加杠则返回-1
      */
-    private int handleJiaGang() {
+    protected int handleJiaGang() {
         List<Integer> mjBottomCodeArray = user.getUserMajiangList().stream().filter(majiang -> !majiang.isJin() && !majiang.isAnGang() && !majiang.isShow()).map(Majiang::getCode).sorted(Integer::compareTo).collect(Collectors.toList());
         List<Integer> mjOutArray = user.getUserMajiangList().stream().filter(Majiang::isShow).map(Majiang::getCode).collect(Collectors.toList());
         if (mjOutArray.size() < 3) {
@@ -366,7 +369,7 @@ public class MajiangClient {
      * @param userMajiangList 玩家麻将列表
      * @return 需要打出的麻将编号
      */
-    private int selectOutMajiang(List<Majiang> userMajiangList) {
+    protected int selectOutMajiang(List<Majiang> userMajiangList) {
         List<Integer> mjList = userMajiangList.stream().filter(majiang -> !majiang.isAnGang() && !majiang.isShow() && !majiang.isJin()).map(Majiang::getCode).sorted(Integer::compareTo).collect(Collectors.toList());
         List<Integer> list3 = new ArrayList<>();
         List<Integer> list2Good = new ArrayList<>();
@@ -404,7 +407,8 @@ public class MajiangClient {
             // 当雀和2,3同时存在时
             return list2Good.get(new Random().nextInt(list2Good.size()));
         } else {
-            return 16;
+            // 应该不会运行到这一步（若是如此直接就胡了）
+            return list3.get(0);
         }
     }
 
@@ -413,7 +417,7 @@ public class MajiangClient {
      * @param mjList
      * @return
      */
-    private List<Integer> select3(List<Integer> mjList) {
+    protected List<Integer> select3(List<Integer> mjList) {
         List<Integer> tmpList = new ArrayList<>();
         for (int i = 0; i < mjList.size(); i++) {
             if (i + 2 >= mjList.size()) {
@@ -457,7 +461,7 @@ public class MajiangClient {
      * @param mjList
      * @return
      */
-    private List<Integer> select2Good(List<Integer> mjList) {
+    protected List<Integer> select2Good(List<Integer> mjList) {
         List<Integer> tmpList = new ArrayList<>();
         for (int i = 0; i < mjList.size(); i++) {
             if (i + 1 >= mjList.size()) {
@@ -495,7 +499,7 @@ public class MajiangClient {
      * @param mjList
      * @return
      */
-    private List<Integer> select2Bad(List<Integer> mjList) {
+    protected List<Integer> select2Bad(List<Integer> mjList) {
         List<Integer> tmpList = new ArrayList<>();
         for (int i = 0; i < mjList.size(); i++) {
             if (i + 1 >= mjList.size()) {
