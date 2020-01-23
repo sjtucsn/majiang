@@ -140,8 +140,8 @@ public class GameController {
                 return;
             }
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-            String robotName = "玩家" + (robotClientSet.size() + 1);
-            MajiangClient client = new AIMajiangClient(robotName);
+            String robotName = "玩家" + (robotClientSet.size() % 2 == 0 ? "高级" : "") +(robotClientSet.size() + 1);
+            MajiangClient client = robotClientSet.size() % 2 == 0 ? new AIMajiangClient(robotName) : new MajiangClient(robotName);
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
             client.send(new Message(CHOOSE_SEAT));
@@ -302,7 +302,13 @@ public class GameController {
                 // 剩余麻将大于0，说明是接着上一次的游戏继续
                 game = MajiangUtil.newGame(currentGame.getBankerName(), currentGame.getUserList());
             } else {
-                game = MajiangUtil.newGame(sessionUserName, currentGame.getUserList());
+                // 游戏刚开始，随机选择一个玩家做为庄家
+                int index = new Random().nextInt(3);
+                Iterator iterator = userMap.values().iterator();
+                for (int i = 0; i < index; i++) {
+                    iterator.next();
+                }
+                game = MajiangUtil.newGame((String) iterator.next(), currentGame.getUserList());
             }
             game.setMessageType(START_GAME);
             game.setGameStarted(true);

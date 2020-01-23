@@ -225,7 +225,7 @@ public class AIMajiangClient extends MajiangClient {
             if (score >= maxScore) {
                 if (score == maxScore) {
                     // 分数相等时选择是否替换，需保持每次结果一致
-                    if (outCode % 2 == Integer.valueOf(session.getId()) % 2) {
+                    if (outCode % 2 == session.getId().charAt(0) % 2) {
                         outCode = mjList.get(i);
                     }
                 } else {
