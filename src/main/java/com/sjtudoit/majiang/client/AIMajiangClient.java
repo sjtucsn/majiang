@@ -38,9 +38,10 @@ public class AIMajiangClient extends MajiangClient {
             List<Integer> tmpMjList = new ArrayList<>(mjBottomCodeArray);
             tmpMjList.remove(tmpMjList.indexOf(currentOutMjCode - 2));
             tmpMjList.remove(tmpMjList.indexOf(currentOutMjCode - 1));
-            int maxScore = countMaxScoreWithOneOut(tmpMjList)[1];
+            int[] result = countMaxScoreWithOneOut(tmpMjList);
+            int maxScore = result[1];
             logger.info("当前分数{}，如果按照这么吃{}后的分数是{}", currentScore, (currentOutMjCode - 2) + " " + (currentOutMjCode - 1) + " " + currentOutMjCode, maxScore + 30);
-            if (maxScore + 30 > currentScore) {
+            if (maxScore + 30 > currentScore && result[0] != currentOutMjCode && !((currentOutMjCode % 10 > 3 ) && result[0] == currentOutMjCode - 3)) {
                 mjId1 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 2).findFirst().get().getId();
                 mjId2 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 1).findFirst().get().getId();
             }
@@ -49,9 +50,10 @@ public class AIMajiangClient extends MajiangClient {
             List<Integer> tmpMjList = new ArrayList<>(mjBottomCodeArray);
             tmpMjList.remove(tmpMjList.indexOf(currentOutMjCode - 1));
             tmpMjList.remove(tmpMjList.indexOf(currentOutMjCode + 1));
-            int maxScore = countMaxScoreWithOneOut(tmpMjList)[1];
+            int[] result = countMaxScoreWithOneOut(tmpMjList);
+            int maxScore = result[1];
             logger.info("当前分数{}，如果按照这么吃{}后的分数是{}", currentScore, (currentOutMjCode - 1) + " " + currentOutMjCode + " " + (currentOutMjCode + 1), maxScore + 30);
-            if (maxScore + 30 > currentScore) {
+            if (maxScore + 30 > currentScore && result[0] != currentOutMjCode) {
                 mjId1 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 1).findFirst().get().getId();
                 mjId2 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode + 1).findFirst().get().getId();
             }
@@ -60,9 +62,10 @@ public class AIMajiangClient extends MajiangClient {
             List<Integer> tmpMjList = new ArrayList<>(mjBottomCodeArray);
             tmpMjList.remove(tmpMjList.indexOf(currentOutMjCode + 1));
             tmpMjList.remove(tmpMjList.indexOf(currentOutMjCode + 2));
-            int maxScore = countMaxScoreWithOneOut(tmpMjList)[1];
+            int[] result = countMaxScoreWithOneOut(tmpMjList);
+            int maxScore = result[1];
             logger.info("当前分数{}，如果按照这么吃{}后的分数是{}", currentScore, currentOutMjCode + " " + (currentOutMjCode + 1) + " " + (currentOutMjCode + 2), maxScore + 30);
-            if (maxScore + 30 > currentScore) {
+            if (maxScore + 30 > currentScore && result[0] != currentOutMjCode && !((currentOutMjCode % 10 < 7) && result[0] == currentOutMjCode + 3)) {
                 mjId1 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode + 1).findFirst().get().getId();
                 mjId2 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode + 2).findFirst().get().getId();
             }
@@ -147,7 +150,7 @@ public class AIMajiangClient extends MajiangClient {
                 tmpMjList.remove(i);
                 int maxScore = countScore(tmpMjList);
                 // 暗杠，分数加多10分
-                logger.info("当前分数{}，如果按照这么暗杠{}后的分数是{}", currentScore, code + " " + code + " " + code + " " + code, maxScore + 10);
+                logger.info("当前分数{}，如果按照这么暗杠{}后的分数是{}", currentScore, code + " " + code + " " + code + " " + code, maxScore + 40);
                 if (maxScore + 40 > currentScore) {
                     return code;
                 } else {
@@ -221,8 +224,8 @@ public class AIMajiangClient extends MajiangClient {
             logger.info("打掉{}后的分数是{}", mjList.get(i), score);
             if (score >= maxScore) {
                 if (score == maxScore) {
-                    // 分数相等时随机选择是否替换
-                    if (new Random().nextBoolean()) {
+                    // 分数相等时选择是否替换，需保持每次结果一致
+                    if (outCode % 2 == Integer.valueOf(session.getId()) % 2) {
                         outCode = mjList.get(i);
                     }
                 } else {

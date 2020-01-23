@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
 @ClientEndpoint
 public class MajiangClient {
     private static Logger logger = LoggerFactory.getLogger(MajiangClient.class);
-    private Session session;
-    private String name;
+    protected Session session;
+    protected String name;
     protected User user;
     protected Game game;
     private boolean ready = false;
