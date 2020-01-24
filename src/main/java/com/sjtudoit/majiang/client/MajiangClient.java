@@ -74,7 +74,7 @@ public class MajiangClient {
             return;
         }
 
-        if (game.getMessageType().equals(MessageType.GAME_OVER) && !ready) {
+        if (!game.getGameStarted() && !ready) {
             // 一局游戏结束后自动准备
             Thread.sleep(200 + new Random().nextInt(300));
             ready = true;
@@ -82,7 +82,7 @@ public class MajiangClient {
             return;
         }
 
-        if (user.getCanQiangJin()) {
+        if (user.getCanQiangJin() && game.getGameStarted()) {
             if (user.getBanker()) {
                 // 庄家抢金，先判断之前打的牌对不对，是否现在可以抢金
                 if (isQiangJin) {

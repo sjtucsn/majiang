@@ -48,11 +48,14 @@ public class GameController {
     // 与某个客户端的连接会话，需要通过它来与客户端进行数据收发
     private Session session;
 
+    protected String sessionName;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(GameController.class);
 
     @OnOpen
     public void onOpen(Session session, @PathParam("name") String name) throws Exception {
         this.session = session;
+        this.sessionName = name;
         // 添加用户会话信息
         userMap.put(session.getId(), name);
         webSocketSet.add(this);
@@ -233,6 +236,7 @@ public class GameController {
                 }
             }
             if (resume) {
+                // 说明有机器人托管，需要退出机器人
                 for (User user : currentGame.getUserList()) {
                     if (user.getUserNickName().equals(sessionUserName)) {
                         user.setRobotPlay(false);
@@ -242,6 +246,14 @@ public class GameController {
                 currentGame.setMessageType(INFO);
                 currentGame.setMessage(sessionUserName + "进入房间");
                 sendMessage(currentGame);
+            } else {
+                for (GameController gameController : webSocketSet) {
+                    if (gameController.sessionName.equals(this.sessionName) && gameController != this) {
+                        // 说明没有机器人，但是有同名者占用连接位置，则把它踢了
+                        gameController.session.close();
+                        return;
+                    }
+                }
             }
 
             if (userList.stream().filter(user -> !user.getUserNickName().equals("")).count() == 4) {
