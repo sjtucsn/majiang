@@ -221,7 +221,7 @@ public class AIMajiangClient extends MajiangClient {
             List<Integer> tmpMjList = new ArrayList<>(mjList);
             tmpMjList.remove(i);
             int score = countScore(tmpMjList);
-            logger.info("打掉{}后的分数是{}", mjList.get(i), score);
+            // logger.info("打掉{}后的分数是{}", mjList.get(i), score);
             if (score >= maxScore) {
                 if (score == maxScore) {
                     // 分数相等时选择是否替换，需保持每次结果一致

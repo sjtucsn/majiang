@@ -97,8 +97,14 @@ public class GameController {
             }
             LOGGER.info("{}异常退出，改为托管模式，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}}", name, userMap, robotClientSet, webSocketSet);
             return;
+        } else {
+            // 如果还有叫该用户的人，说明是游戏未开始时用户回来踢掉同名用户
+            if (userMap.containsValue(name)) {
+                LOGGER.info("{}用户被同名用户踢掉，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
+                return;
+            }
         }
-        // 用户下线前删除牌桌内的信息
+        // 一局游戏结束后，用户下线前删除牌桌内的信息
         List<User> userList = currentGame.getUserList();
         for (int i = 0; i < 4; i++) {
             User user = userList.get(i);
@@ -116,11 +122,13 @@ public class GameController {
         // 删除用户会话信息
         LOGGER.info("用户{}正常退出房间，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
 
-        // 若场内只有机器人，则关闭所有连接
-        if (userMap.values().stream().allMatch(value -> value.startsWith("玩家"))) {
+        // 若场内只有机器人，则关闭所有玩家连接
+        if (currentGame.getUserList().stream().allMatch(user -> user.getUserNickName().startsWith("玩家") || user.getUserNickName().isEmpty())) {
             currentGame = new Game(INFO);
             for (GameController gameController : webSocketSet) {
-                gameController.session.close();
+                if (gameController.sessionName.startsWith("玩家")) {
+                    gameController.session.close();
+                }
             }
         }
     }
@@ -139,7 +147,7 @@ public class GameController {
 
         // 添加机器人
         if (receivedMessage.getType().equals(ADD_ROBOT)) {
-            if (userMap.size() >= 4) {
+            if (currentGame.getUserList().stream().filter(user -> !user.getUserNickName().equals("")).count() == 4) {
                 return;
             }
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
@@ -251,6 +259,10 @@ public class GameController {
                     if (gameController.sessionName.equals(this.sessionName) && gameController != this) {
                         // 说明没有机器人，但是有同名者占用连接位置，则把它踢了
                         gameController.session.close();
+                        LOGGER.info("{}进入房间并把上一个它的连接踢了，当前的userMap是{}，\r\n robotClientSet是{}, \r\n websocketSet是{}", sessionUserName, userMap, robotClientSet, webSocketSet);
+                        currentGame.setMessageType(INFO);
+                        currentGame.setMessage(sessionUserName + "进入房间");
+                        sendMessage(currentGame);
                         return;
                     }
                 }
