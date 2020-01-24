@@ -88,12 +88,13 @@ public class MajiangClient {
                 if (isQiangJin) {
                     isQiangJin = false;
                     send(new Message(MessageType.MJ_HU, "抢金"));
+                    return;
                 }
             } else {
                 // 非庄家自动抢金判断
                 send(new Message(MessageType.MJ_HU, "抢金"));
+                return;
             }
-            return;
         }
 
         // 轮到自己时
