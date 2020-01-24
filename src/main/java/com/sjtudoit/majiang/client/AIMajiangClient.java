@@ -260,12 +260,12 @@ public class AIMajiangClient extends MajiangClient {
 
         public int countScore() {
             arrangeMajiang();
-            System.out.println("-----------------算分结果begin-----------------");
+            /* System.out.println("-----------------算分结果begin-----------------");
             System.out.println(select3List);
             System.out.println(select2GoodList);
             System.out.println(select2BadList);
             System.out.println(select1List);
-            System.out.println("-----------------算分结果end-----------------" + (select3List.size() * 10 + select2GoodList.size() * 8 + select2BadList.size() * 6 + select1List.size() * 5));
+            System.out.println("-----------------算分结果end-----------------" + (select3List.size() * 10 + select2GoodList.size() * 8 + select2BadList.size() * 6 + select1List.size() * 5)); */
             return select3List.size() / 3 * 30 + select2GoodList.size() / 2 * 16 + select2BadList.size() / 2 * 12 + select1List.size() * 5;
         }
 
