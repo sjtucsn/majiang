@@ -24,6 +24,7 @@ public class MajiangClient {
     protected User user;
     protected Game game;
     private boolean ready = false;
+    private boolean isQiangJin = false;
 
     public MajiangClient() {
     }
@@ -84,7 +85,8 @@ public class MajiangClient {
         if (user.getCanQiangJin()) {
             if (user.getBanker()) {
                 // 庄家抢金，先判断之前打的牌对不对，是否现在可以抢金
-                if (MajiangUtil.canHuWithNewMajiang(user.getUserMajiangList(), game.getJin())) {
+                if (isQiangJin) {
+                    isQiangJin = false;
                     send(new Message(MessageType.MJ_HU, "抢金"));
                 }
             } else {
@@ -112,6 +114,7 @@ public class MajiangClient {
                     majiangList.remove(j);
                     if (MajiangUtil.canHuWithQiangJin(majiangList, game.getJin())) {
                         // 打掉这张牌，则可以抢金
+                        isQiangJin = true;
                         send(new Message(MessageType.MJ_OUT, String.valueOf(j)));
                         return;
                     }
