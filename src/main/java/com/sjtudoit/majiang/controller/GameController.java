@@ -295,7 +295,7 @@ public class GameController {
             // 广播用户下线
             currentGame.setMessageType(INFO);
             currentGame.setMessage(sessionUserName + "退出房间");
-            sendMessage(currentGame);
+            sendMessageWithoutSelf(currentGame);
 
             List<List<String>> userUserList = currentGameList.stream().map(game -> game.getUserList().stream().map(User::getUserNickName).collect(Collectors.toList())).collect(Collectors.toList());
             session.getBasicRemote().sendText(JSONObject.toJSONString(userUserList, SerializerFeature.DisableCircularReferenceDetect));
@@ -928,6 +928,25 @@ public class GameController {
     public void sendMessage(Game game) throws Exception {
         for (GameController gameController : webSocketSet) {
             if (gameController.tableId != null && gameController.tableId.equals(tableId) && gameController.session.isOpen()) {
+                if (userMap.keySet().contains(gameController.session.getId())) {
+                    // 只向当前userMap里用户建立的连接发送消息
+                    synchronized (gameController.session.getId()) {
+                        // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
+                        gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(game, SerializerFeature.DisableCircularReferenceDetect));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 通过websocket发送游戏消息（但不给本连接发送）
+     * @param game 当前游戏对象
+     * @throws Exception
+     */
+    public void sendMessageWithoutSelf(Game game) throws Exception {
+        for (GameController gameController : webSocketSet) {
+            if (gameController.tableId != null && gameController.tableId.equals(tableId) && gameController.session.isOpen() && gameController != this) {
                 if (userMap.keySet().contains(gameController.session.getId())) {
                     // 只向当前userMap里用户建立的连接发送消息
                     synchronized (gameController.session.getId()) {
