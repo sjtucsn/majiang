@@ -139,9 +139,10 @@ public class GameController {
 
         // 若场内只有机器人，则关闭所有玩家连接
         if (currentGame.getUserList().stream().allMatch(user -> user.getUserNickName().startsWith("玩家") || user.getUserNickName().isEmpty())) {
+            List<String> userNameList = currentGame.getUserList().stream().map(User::getUserNickName).collect(Collectors.toList());
             currentGameList.set(tableId, new Game(INFO));
             for (GameController gameController : webSocketSet) {
-                if (gameController.sessionName.startsWith("玩家")) {
+                if (userNameList.contains(gameController.sessionName) && gameController.sessionName.startsWith("玩家")) {
                     gameController.session.close();
                 }
             }
@@ -204,7 +205,7 @@ public class GameController {
                 LOGGER.info("{}重新回到房间选择座位，当前的userMap是{}，\r\n robotClientSet是{}, \r\n websocketSet是{}", sessionUserName, userMap, robotClientSet, webSocketSet);
                 currentGame.setMessageType(INFO);
                 currentGame.setMessage(sessionUserName + "进入房间");
-                sendMessage(currentGame);
+                sendTableMessage(currentGame);
             } else {
                 for (GameController gameController : webSocketSet) {
                     if (gameController.sessionName.equals(this.sessionName) && gameController != this) {
@@ -213,7 +214,7 @@ public class GameController {
                         LOGGER.info("{}进入房间并把上一个它的连接踢了，当前的userMap是{}，\r\n robotClientSet是{}, \r\n websocketSet是{}", sessionUserName, userMap, robotClientSet, webSocketSet);
                         currentGame.setMessageType(INFO);
                         currentGame.setMessage(sessionUserName + "进入房间");
-                        sendMessage(currentGame);
+                        sendTableMessage(currentGame);
                         return;
                     }
                 }
@@ -243,7 +244,7 @@ public class GameController {
             // 广播用户进入房间
             currentGame.setMessageType(INFO);
             currentGame.setMessage(sessionUserName + "进入房间");
-            sendMessage(currentGame);
+            sendTableMessage(currentGame);
             return;
         }
 
@@ -295,10 +296,7 @@ public class GameController {
             // 广播用户下线
             currentGame.setMessageType(INFO);
             currentGame.setMessage(sessionUserName + "退出房间");
-            sendMessageWithoutSelf(currentGame);
-
-            List<List<String>> userUserList = currentGameList.stream().map(game -> game.getUserList().stream().map(User::getUserNickName).collect(Collectors.toList())).collect(Collectors.toList());
-            session.getBasicRemote().sendText(JSONObject.toJSONString(userUserList, SerializerFeature.DisableCircularReferenceDetect));
+            sendTableMessage(currentGame);
 
             // 当用户人数为0时重新开始游戏，并清空所有音频信息
             if (currentGame.getUserList().stream().allMatch(user -> user.getUserNickName().equals(""))) {
@@ -928,30 +926,45 @@ public class GameController {
     public void sendMessage(Game game) throws Exception {
         for (GameController gameController : webSocketSet) {
             if (gameController.tableId != null && gameController.tableId.equals(tableId) && gameController.session.isOpen()) {
-                if (userMap.keySet().contains(gameController.session.getId())) {
-                    // 只向当前userMap里用户建立的连接发送消息
-                    synchronized (gameController.session.getId()) {
-                        // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
-                        gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(game, SerializerFeature.DisableCircularReferenceDetect));
-                    }
+                synchronized (gameController.session.getId()) {
+                    // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
+                    gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(game, SerializerFeature.DisableCircularReferenceDetect));
                 }
             }
         }
     }
 
     /**
-     * 通过websocket发送游戏消息（但不给本连接发送）
-     * @param game 当前游戏对象
+     * 通过websocket发送大厅消息（给本桌之外的发送）
      * @throws Exception
      */
-    public void sendMessageWithoutSelf(Game game) throws Exception {
+    public void sendTableMessage(Game currentGame) throws Exception {
+        List<List<String>> userUserList = currentGameList.stream().map(game -> game.getUserList().stream().map(User::getUserNickName).collect(Collectors.toList())).collect(Collectors.toList());
         for (GameController gameController : webSocketSet) {
-            if (gameController.tableId != null && gameController.tableId.equals(tableId) && gameController.session.isOpen() && gameController != this) {
-                if (userMap.keySet().contains(gameController.session.getId())) {
-                    // 只向当前userMap里用户建立的连接发送消息
-                    synchronized (gameController.session.getId()) {
-                        // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
-                        gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(game, SerializerFeature.DisableCircularReferenceDetect));
+            if (gameController.tableId != null && gameController.session.isOpen()) {
+                if (currentGame.getMessage().contains("退出")) {
+                    if (gameController.tableId.equals(tableId) && gameController != this) {
+                        // 向本桌内部连接发送currentGame
+                        synchronized (gameController.session.getId()) {
+                            gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(currentGame, SerializerFeature.DisableCircularReferenceDetect));
+                        }
+                    } else {
+                        // 向本桌之外的发送userUserList信息
+                        synchronized (gameController.session.getId()) {
+                            gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(userUserList, SerializerFeature.DisableCircularReferenceDetect));
+                        }
+                    }
+                } else {
+                    if (gameController.tableId.equals(tableId)) {
+                        // 向本桌内部连接发送currentGame
+                        synchronized (gameController.session.getId()) {
+                            gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(currentGame, SerializerFeature.DisableCircularReferenceDetect));
+                        }
+                    } else {
+                        // 向本桌之外的发送userUserList信息
+                        synchronized (gameController.session.getId()) {
+                            gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(userUserList, SerializerFeature.DisableCircularReferenceDetect));
+                        }
                     }
                 }
             }
@@ -967,7 +980,6 @@ public class GameController {
         for (GameController gameController : webSocketSet) {
             if (gameController.tableId != null && gameController.tableId.equals(tableId) && gameController.session.isOpen()) {
                 synchronized (gameController.session.getId()) {
-                    // SerializerFeature.DisableCircularReferenceDetect: 避免fastjson解析对象时出现循环引用$ref
                     gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(message, SerializerFeature.DisableCircularReferenceDetect));
                 }
             }
