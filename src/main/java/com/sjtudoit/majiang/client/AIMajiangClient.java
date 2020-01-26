@@ -10,7 +10,6 @@ import javax.websocket.ClientEndpoint;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 @ClientEndpoint
@@ -21,6 +20,10 @@ public class AIMajiangClient extends MajiangClient {
 
     public AIMajiangClient(String name) {
         super(name);
+    }
+
+    public AIMajiangClient(String name, Integer tableId) {
+        super(name, tableId);
     }
 
     @Override

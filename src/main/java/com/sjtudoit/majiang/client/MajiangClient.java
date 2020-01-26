@@ -23,6 +23,7 @@ public class MajiangClient {
     protected String name;
     protected User user;
     protected Game game;
+    private Integer tableId;
     private boolean ready = false;
     private boolean isQiangJin = false;
 
@@ -31,6 +32,11 @@ public class MajiangClient {
 
     public MajiangClient(String name) {
         this.name = name;
+    }
+
+    public MajiangClient(String name, Integer tableId) {
+        this.name = name;
+        this.tableId = tableId;
     }
 
     @OnOpen
@@ -43,6 +49,10 @@ public class MajiangClient {
 
     @OnMessage
     public void onMessage(String message) throws Exception {
+        if (message.startsWith("[")) {
+            // 不用在意刚建立连接时返回的信息
+            return;
+        }
         game = JSON.parseObject(message, Game.class);
         if (game.getMessageType() == null) {
             return;
@@ -214,6 +224,10 @@ public class MajiangClient {
 
     public String getName() {
         return name;
+    }
+
+    public Integer getTableId() {
+        return tableId;
     }
 
     /**
