@@ -261,12 +261,6 @@ public class GameController {
         }
         Game currentGame = currentGameList.get(tableId);
 
-        // 防止不同用户之间的误操作，只有抢金指令可以无视当前轮到用户
-        if (!Objects.equals(receivedMessage.getMessage(), "抢金") && !Objects.equals(currentGame.getCurrentUserName(), sessionUserName)) {
-            LOGGER.info("指令无效，此时轮到的不是{}", sessionUserName);
-            return;
-        }
-
         // 获取当前游戏信息
         if (receivedMessage.getType().equals(GET_GAME)) {
             if (session.isOpen()) {
@@ -408,6 +402,11 @@ public class GameController {
 
         if (!currentGame.getGameStarted()) {
             // 如果走到这一步当前局已结束，则不执行后续逻辑
+            return;
+        }
+        // 防止不同用户之间的误操作，只有抢金指令可以无视当前轮到用户
+        if (!Objects.equals(receivedMessage.getMessage(), "抢金") && !currentUserName.equals(sessionUserName)) {
+            LOGGER.info("指令无效，此时轮到的不是{}", sessionUserName);
             return;
         }
         // 根据发送的指令信息响应同样的信息类型
