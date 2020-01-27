@@ -45,7 +45,7 @@ public class GameController {
     private static Set<GameController> webSocketSet = new CopyOnWriteArraySet<>();
 
     // 机器人集合
-    private static Set<MajiangClient> robotClientSet = new HashSet<>();
+    private static Set<MajiangClient> robotClientSet = new CopyOnWriteArraySet<>();
 
     // 当前所有建立连接的用户的sessionId和userName组成的userMap
     private static Map<String, String> userMap = new HashMap<>();
