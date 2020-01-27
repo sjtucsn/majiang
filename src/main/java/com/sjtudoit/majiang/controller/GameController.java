@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.sjtudoit.majiang.client.AIMajiangClient;
 import com.sjtudoit.majiang.client.MajiangClient;
+import com.sjtudoit.majiang.constant.RobotStatus;
 import com.sjtudoit.majiang.dto.Game;
 import com.sjtudoit.majiang.dto.Majiang;
 import com.sjtudoit.majiang.dto.Message;
@@ -33,31 +34,33 @@ public class GameController {
     // 创建默认当前游戏
     private static List<Game> currentGameList = new ArrayList<>();
 
+    // 创建三桌麻将
     static {
         for (int i = 0; i < 3; i++) {
             currentGameList.add(new Game(INFO));
         }
     }
 
+    // 所有建立的websocket服务端连接集合
     private static Set<GameController> webSocketSet = new CopyOnWriteArraySet<>();
 
     // 机器人集合
     private static Set<MajiangClient> robotClientSet = new HashSet<>();
 
-    // 当前用户Map
+    // 当前所有建立连接的用户的sessionId和userName组成的userMap
     private static Map<String, String> userMap = new HashMap<>();
 
     // 连接对应的机器人
     private MajiangClient robotClient = null;
 
-    // 对应的桌号
-    protected Integer tableId = null;
+    // 本websocket连接对应的桌号
+    private Integer tableId = null;
 
     // 与某个客户端的连接会话，需要通过它来与客户端进行数据收发
     private Session session;
 
     // 该会话的用户名
-    protected String sessionName;
+    private String sessionName;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GameController.class);
 
@@ -69,15 +72,27 @@ public class GameController {
         userMap.put(session.getId(), name);
         webSocketSet.add(this);
         for (MajiangClient majiangClient : robotClientSet) {
-            if (majiangClient.getName().equals(name)) {
+            if (majiangClient.getName().equals(name) && majiangClient.getRobotStatus() != RobotStatus.USER_ROBOT_OUT) {
                 // 记录当前会话对应的机器人对象（如果存在）
                 robotClient = majiangClient;
                 tableId = majiangClient.getTableId();
+                if (majiangClient.getRobotStatus() == RobotStatus.USER_ROBOT_IN) {
+                    // 更改托管机器人状态，防止正常玩家进入时误认为是机器人
+                    majiangClient.setRobotStatus(RobotStatus.USER_ROBOT_OUT);
+                }
+            }
+        }
+        // 防止一个用户建立两个连接
+        for (GameController gameController : webSocketSet) {
+            if (gameController != this && gameController.sessionName.equals(name) && gameController.robotClient == null) {
+                LOGGER.info("用户{}进入大厅，但大厅中已有同名用户，故本次连接关闭", name);
+                session.close();
+                return;
             }
         }
         List<List<String>> userUserList = currentGameList.stream().map(game -> game.getUserList().stream().map(User::getUserNickName).collect(Collectors.toList())).collect(Collectors.toList());
         session.getBasicRemote().sendText(JSONObject.toJSONString(userUserList, SerializerFeature.DisableCircularReferenceDetect));
-        LOGGER.info("用户{}" + (robotClient == null ? "" : "机器人") + "进入房间，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
+        LOGGER.info("用户{}" + (robotClient == null ? "" : "机器人") + "进入大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
     }
 
     @OnClose
@@ -87,19 +102,16 @@ public class GameController {
         userMap.remove(session.getId());
         if (robotClient != null) {
             robotClientSet.remove(robotClient);
+            LOGGER.info("用户{}机器人连接关闭，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
+            return;
         }
         if (tableId == null) {
+            LOGGER.info("用户{}尚未选桌就直接退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
             return;
         }
         Game currentGame = currentGameList.get(tableId);
         if (currentGame.getGameStarted()) {
             // 游戏正在进行中发生异常情况中止连接时，切换为托管模式
-            if (userMap.containsValue(name)) {
-                // 如果还有叫该用户的人，说明是玩家掉线后回来，则不启动新机器人
-                LOGGER.info("当前局面有{}用户存在，故不进入托管模式，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
-                return;
-            }
-            // 创建托管AI
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             String robotName = name;
             MajiangClient client = new AIMajiangClient(robotName, tableId);
@@ -112,12 +124,6 @@ public class GameController {
             }
             LOGGER.info("{}异常退出，改为托管模式，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}}", name, userMap, robotClientSet, webSocketSet);
             return;
-        } else {
-            // 如果还有叫该用户的人，说明是游戏未开始时用户回来踢掉同名用户
-            if (userMap.containsValue(name)) {
-                LOGGER.info("{}用户被同名用户踢掉，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
-                return;
-            }
         }
         // 一局游戏结束后，用户下线前删除牌桌内的信息
         List<User> userList = currentGame.getUserList();
@@ -135,7 +141,7 @@ public class GameController {
         }
 
         // 删除用户会话信息
-        LOGGER.info("用户{}正常退出房间，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
+        LOGGER.info("用户{}正常退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
 
         // 若场内只有机器人，则关闭所有玩家连接
         if (currentGame.getUserList().stream().allMatch(user -> user.getUserNickName().startsWith("玩家") || user.getUserNickName().isEmpty())) {
@@ -189,7 +195,7 @@ public class GameController {
             // 判断用户是否为重新回到房间进入游戏（之前由机器人托管代打）
             boolean resume = false;
             for (MajiangClient majiangClient : robotClientSet) {
-                if (majiangClient.getName().equals(sessionUserName) && !sessionUserName.startsWith("玩家")) {
+                if (majiangClient.getName().equals(sessionUserName) && !sessionUserName.startsWith("玩家") && tableId.equals(majiangClient.getTableId())) {
                     // 用户重新进入时，机器人玩家下线
                     resume = true;
                     majiangClient.getSession().close();
@@ -202,16 +208,17 @@ public class GameController {
                         user.setRobotPlay(false);
                     }
                 }
-                LOGGER.info("{}重新回到房间选择座位，当前的userMap是{}，\r\n robotClientSet是{}, \r\n websocketSet是{}", sessionUserName, userMap, robotClientSet, webSocketSet);
+                LOGGER.info("{}重新回到房间{}选择座位，当前的userMap是{}，\r\n robotClientSet是{}, \r\n websocketSet是{}", sessionUserName, tableId, userMap, robotClientSet, webSocketSet);
                 currentGame.setMessageType(INFO);
                 currentGame.setMessage(sessionUserName + "进入房间");
                 sendTableMessage(currentGame);
             } else {
                 for (GameController gameController : webSocketSet) {
-                    if (gameController.sessionName.equals(this.sessionName) && gameController != this) {
-                        // 说明没有机器人，但是有同名者占用连接位置，则把它踢了
-                        gameController.session.close();
+                    if (gameController.tableId != null && gameController.tableId.equals(tableId) && gameController.sessionName.equals(this.sessionName) && gameController != this) {
+                        // 说明没有机器人，但是有同名者占用本桌连接位置，则把它踢了
                         LOGGER.info("{}进入房间并把上一个它的连接踢了，当前的userMap是{}，\r\n robotClientSet是{}, \r\n websocketSet是{}", sessionUserName, userMap, robotClientSet, webSocketSet);
+                        gameController.tableId = null;
+                        gameController.session.close();
                         currentGame.setMessageType(INFO);
                         currentGame.setMessage(sessionUserName + "进入房间");
                         sendTableMessage(currentGame);
@@ -225,6 +232,7 @@ public class GameController {
                 return;
             }
 
+            // 将用户加入牌桌
             if (Integer.valueOf(position) % 4 == 0) {
                 for (int i = 0; i < 4; i++) {
                     User user = userList.get(i);
@@ -941,9 +949,9 @@ public class GameController {
     public void sendTableMessage(Game currentGame) throws Exception {
         List<List<String>> userUserList = currentGameList.stream().map(game -> game.getUserList().stream().map(User::getUserNickName).collect(Collectors.toList())).collect(Collectors.toList());
         for (GameController gameController : webSocketSet) {
-            if (gameController.tableId != null && gameController.session.isOpen()) {
+            if (gameController.session.isOpen()) {
                 if (currentGame.getMessage().contains("退出")) {
-                    if (gameController.tableId.equals(tableId) && gameController != this) {
+                    if (gameController.tableId != null && gameController.tableId.equals(tableId) && gameController != this) {
                         // 向本桌内部连接发送currentGame
                         synchronized (gameController.session.getId()) {
                             gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(currentGame, SerializerFeature.DisableCircularReferenceDetect));
@@ -955,7 +963,7 @@ public class GameController {
                         }
                     }
                 } else {
-                    if (gameController.tableId.equals(tableId)) {
+                    if (gameController.tableId != null && gameController.tableId.equals(tableId)) {
                         // 向本桌内部连接发送currentGame
                         synchronized (gameController.session.getId()) {
                             gameController.session.getBasicRemote().sendText(JSONObject.toJSONString(currentGame, SerializerFeature.DisableCircularReferenceDetect));

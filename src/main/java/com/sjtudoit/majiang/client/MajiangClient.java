@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.sjtudoit.majiang.constant.MessageType;
+import com.sjtudoit.majiang.constant.RobotStatus;
 import com.sjtudoit.majiang.dto.Game;
 import com.sjtudoit.majiang.dto.Majiang;
 import com.sjtudoit.majiang.dto.Message;
@@ -19,13 +20,18 @@ import java.util.stream.Collectors;
 @ClientEndpoint
 public class MajiangClient {
     private static Logger logger = LoggerFactory.getLogger(MajiangClient.class);
-    protected Session session;
-    protected String name;
-    protected User user;
-    protected Game game;
+
+    Session session;
+    User user;
+    Game game;
+
+    // 机器人状态 0：普通机器人玩家|1：托管机器人即将建立连接|2：托管机器人已建立连接
+    private Integer robotStatus = RobotStatus.AI_ROBOT;
+    private String name;
     private Integer tableId;
     private boolean ready = false;
     private boolean isQiangJin = false;
+
 
     public MajiangClient() {
     }
@@ -37,6 +43,7 @@ public class MajiangClient {
     public MajiangClient(String name, Integer tableId) {
         this.name = name;
         this.tableId = tableId;
+        this.robotStatus = RobotStatus.USER_ROBOT_IN;
     }
 
     @OnOpen
@@ -216,18 +223,6 @@ public class MajiangClient {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public Session getSession() {
-        return session;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Integer getTableId() {
-        return tableId;
     }
 
     /**
@@ -552,17 +547,38 @@ public class MajiangClient {
         return tmpList;
     }
 
+    public Session getSession() {
+        return session;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Integer getTableId() {
+        return tableId;
+    }
+
+    public Integer getRobotStatus() {
+        return robotStatus;
+    }
+
+    public void setRobotStatus(Integer robotStatus) {
+        this.robotStatus = robotStatus;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MajiangClient that = (MajiangClient) o;
-        return Objects.equals(name, that.name);
+        return Objects.equals(name, that.name) &&
+                Objects.equals(tableId, that.tableId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(name, tableId);
     }
 
     @Override

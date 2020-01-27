@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 public class AIMajiangClient extends MajiangClient {
     private static Logger logger = LoggerFactory.getLogger(AIMajiangClient.class);
 
-    private MajiangArrangeExecutor majiangArrangeExecutor;
-
     public AIMajiangClient(String name) {
         super(name);
     }
@@ -246,7 +244,7 @@ public class AIMajiangClient extends MajiangClient {
      * @return 分数
      */
     private int countScore(List<Integer> mjList) {
-        majiangArrangeExecutor = new MajiangArrangeExecutor(mjList);
+        MajiangArrangeExecutor majiangArrangeExecutor = new MajiangArrangeExecutor(mjList);
         return majiangArrangeExecutor.countScore();
     }
 
