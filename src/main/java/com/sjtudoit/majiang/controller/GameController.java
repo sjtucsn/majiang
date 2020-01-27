@@ -135,7 +135,7 @@ public class GameController {
                 // 广播用户下线
                 currentGame.setMessageType(INFO);
                 currentGame.setMessage(name + "退出房间");
-                sendMessage(currentGame);
+                sendTableMessage(currentGame);
                 break;
             }
         }
