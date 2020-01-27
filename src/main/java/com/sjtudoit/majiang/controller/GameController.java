@@ -261,6 +261,12 @@ public class GameController {
         }
         Game currentGame = currentGameList.get(tableId);
 
+        // 防止不同用户之间的误操作，只有抢金指令可以无视当前轮到用户
+        if (!receivedMessage.getMessage().equals("抢金") && currentGame.getCurrentUserName() != null && !currentGame.getCurrentUserName().equals(sessionUserName)) {
+            LOGGER.info("指令无效，此时轮到的不是{}", sessionUserName);
+            return;
+        }
+
         // 获取当前游戏信息
         if (receivedMessage.getType().equals(GET_GAME)) {
             if (session.isOpen()) {
