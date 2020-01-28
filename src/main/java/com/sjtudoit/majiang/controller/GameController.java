@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.sjtudoit.majiang.client.AIMajiangClient;
+import com.sjtudoit.majiang.client.AIMajiangClient2;
 import com.sjtudoit.majiang.client.MajiangClient;
 import com.sjtudoit.majiang.constant.RobotStatus;
 import com.sjtudoit.majiang.dto.Game;
@@ -116,7 +117,7 @@ public class GameController {
             // 游戏正在进行中发生异常情况中止连接时，切换为托管模式
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             String robotName = name;
-            MajiangClient client = new AIMajiangClient(robotName, tableId);
+            MajiangClient client = new AIMajiangClient2(robotName, tableId);
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
             for (User user : currentGame.getUserList()) {
@@ -277,8 +278,18 @@ public class GameController {
                 return;
             }
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-            String robotName = "玩家" + (robotClientSet.size() % 2 == 0 ? "高级" : "") +(robotClientSet.size() + 1);
-            MajiangClient client = robotClientSet.size() % 2 == 0 ? new AIMajiangClient(robotName) : new MajiangClient(robotName);
+            String robotName;
+            MajiangClient client;
+            if (robotClientSet.size() % 3 == 2) {
+                robotName = "玩家" + (robotClientSet.size() + 1);
+                client = new MajiangClient(robotName);
+            } else if (robotClientSet.size() % 3 == 1) {
+                robotName = "玩家高级" + (robotClientSet.size() + 1);
+                client = new AIMajiangClient(robotName);
+            } else {
+                robotName = "玩家特级" + (robotClientSet.size() + 1);
+                client = new AIMajiangClient2(robotName);
+            }
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
             client.send(new Message(CHOOSE_SEAT, String.valueOf(tableId * 4)));
