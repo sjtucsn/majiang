@@ -100,14 +100,18 @@ public class GameController {
         // 连接关闭时确保相关对象均已释放
         webSocketSet.remove(this);
         userMap.remove(session.getId());
+        Game currentGame = currentGameList.get(tableId);
         if (robotClient != null) {
             robotClientSet.remove(robotClient);
+            if (currentGame.getGameStarted()) {
+                LOGGER.info("用户{}机器人托管取消，退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
+                return;
+            }
         }
         if (tableId == null) {
             LOGGER.info("用户{}尚未选桌就直接退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
             return;
         }
-        Game currentGame = currentGameList.get(tableId);
         if (currentGame.getGameStarted()) {
             // 游戏正在进行中发生异常情况中止连接时，切换为托管模式
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
