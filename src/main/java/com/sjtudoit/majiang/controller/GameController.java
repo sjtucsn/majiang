@@ -102,8 +102,6 @@ public class GameController {
         userMap.remove(session.getId());
         if (robotClient != null) {
             robotClientSet.remove(robotClient);
-            LOGGER.info("用户{}机器人连接关闭，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
-            return;
         }
         if (tableId == null) {
             LOGGER.info("用户{}尚未选桌就直接退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
@@ -141,7 +139,7 @@ public class GameController {
         }
 
         // 删除用户会话信息
-        LOGGER.info("用户{}正常退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
+        LOGGER.info("用户{}" + (robotClient == null ? "" : "机器人") + "正常退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
 
         // 若场内只有机器人，则关闭所有玩家连接
         if (currentGame.getUserList().stream().allMatch(user -> user.getUserNickName().startsWith("玩家") || user.getUserNickName().isEmpty())) {
