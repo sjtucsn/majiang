@@ -37,10 +37,11 @@ public class MajiangUtil {
     /**
      * 开始新游戏
      * @param bankerName 庄家的名称
+     * @param bankerNo 当前串数
      * @param userList 所有玩家的列表
      * @return 新游戏对象
      */
-    public static Game newGame(String bankerName, List<User> userList) {
+    public static Game newGame(String bankerName, Integer bankerNo, List<User> userList) {
         List<Majiang> majiangList = generateMajiangList();
 
         for (int i = 0; i < userList.size(); i++) {
@@ -58,7 +59,7 @@ public class MajiangUtil {
         }
 
         majiangList = new ArrayList<>(majiangList.subList(65, 128));
-        Game game = new Game(userList, majiangList, bankerName);
+        Game game = new Game(userList, majiangList, bankerName, bankerNo);
 
         // 判断谁先补花
         User bankerUser = userList.stream().filter(user -> user.getUserNickName().equals(bankerName)).collect(Collectors.toList()).get(0);

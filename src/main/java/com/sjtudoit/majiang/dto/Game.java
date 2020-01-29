@@ -41,6 +41,12 @@ public class Game {
     // 游戏状态
     private Boolean gameStarted = false;
 
+    // 当前串数
+    private Integer bankerNo = 1;
+
+    // 是否换庄
+    private boolean bankerChange = false;
+
     public Game() {
     }
 
@@ -48,22 +54,18 @@ public class Game {
         this.messageType = messageType;
     }
 
-    public Game(Integer messageType, String message, String messageUserName) {
-        this.messageType = messageType;
-        this.message = message;
-        this.messageUserName = messageUserName;
-    }
 
     /**
      * 创建新的游戏对象
      * @param remainMajiangList 剩余麻将数组
      * @param bankerName 庄家名称
      */
-    public Game(List<User> userList, List<Majiang> remainMajiangList, String bankerName) {
+    public Game(List<User> userList, List<Majiang> remainMajiangList, String bankerName, Integer bankerNo) {
         this.userList = userList;
         this.remainMajiangList = remainMajiangList;
         this.currentUserName = bankerName;
         this.bankerName = bankerName;
+        this.bankerNo = bankerNo;
         this.physicalNextUserName = bankerName;
     }
 
@@ -177,6 +179,22 @@ public class Game {
 
     public void setGameStarted(Boolean gameStarted) {
         this.gameStarted = gameStarted;
+    }
+
+    public Integer getBankerNo() {
+        return bankerNo;
+    }
+
+    public void setBankerNo(Integer bankerNo) {
+        this.bankerNo = bankerNo;
+    }
+
+    public boolean isBankerChange() {
+        return bankerChange;
+    }
+
+    public void setBankerChange(boolean bankerChange) {
+        this.bankerChange = bankerChange;
     }
 
     @Override

@@ -368,12 +368,12 @@ public class GameController {
             Game game;
             if (currentGame.getRemainMajiangList().size() > 0) {
                 // 剩余麻将大于0，说明是接着上一次的游戏继续
-                game = MajiangUtil.newGame(currentGame.getBankerName(), currentGame.getUserList());
+                game = MajiangUtil.newGame(currentGame.getBankerName(), currentGame.isBankerChange() ? currentGame.getBankerNo() + 1 : currentGame.getBankerNo(), currentGame.getUserList());
             } else {
                 // 游戏刚开始，随机选择一个玩家做为庄家
                 int index = new Random().nextInt(3);
                 String bankerName = currentGame.getUserList().get(index).getUserNickName();
-                game = MajiangUtil.newGame(bankerName, currentGame.getUserList());
+                game = MajiangUtil.newGame(bankerName, 1, currentGame.getUserList());
             }
             game.setMessageType(START_GAME);
             game.setGameStarted(true);
@@ -857,6 +857,7 @@ public class GameController {
                         // 更新游戏信息
                         currentGame.setCurrentUserName(sessionUserName);
                         // 设置下轮庄家名称
+                        currentGame.setBankerChange(!currentGame.getBankerName().equals(qiangJinUser.getUserNickName()));
                         currentGame.setBankerName(currentGame.getBankerName().equals(qiangJinUser.getUserNickName()) ? qiangJinUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
                         // 设置抢金后不能抢金
                         qiangJinUser.setCanQiangJin(false);
@@ -887,6 +888,7 @@ public class GameController {
                         // 更新游戏信息
                         userList.set(currentUser.getIndex(), currentUser);
                         MajiangUtil.countScore(userList, currentUser, moneyNum);
+                        currentGame.setBankerChange(!currentGame.getBankerName().equals(currentUser.getUserNickName()));
                         currentGame.setBankerName(currentGame.getBankerName().equals(currentUser.getUserNickName()) ? currentUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
                         currentGame.setCurrentOutMajiang(null);
                         currentGame.setCurrentUserName(sessionUserName);
@@ -912,6 +914,7 @@ public class GameController {
                         // 更新游戏信息
                         userList.set(currentUser.getIndex(), currentUser);
                         MajiangUtil.countScore(userList, currentUser, moneyNum);
+                        currentGame.setBankerChange(!currentGame.getBankerName().equals(currentUser.getUserNickName()));
                         currentGame.setBankerName(currentGame.getBankerName().equals(currentUser.getUserNickName()) ? currentUser.getUserNickName() : userList.get((banker.getIndex() + 1) % 4).getUserNickName());
                         currentGame.setCurrentUserName(sessionUserName);
                         sendMessage(currentGame);
