@@ -627,8 +627,8 @@ public class AIMajiangClient2 extends MajiangClient {
             arrangeMajiang();
             float score = (float) (select3List.size() / 3 * 30 +
                     select3GoodList.size() / 3 * 18 +
-                    select3BadList.size() / 3 * 15 +
                     select2GoodList.size() / 2 * 12 +
+                    select3BadList.size() / 3 * 15 +
                     (select2QueList.size() <= 2 ? select2QueList.size() / 2 * 12 : select2QueList.size() / 2 * 10) +
                     select2BadList.size() / 2 * 8 +
                     select1List.size() * 2);
@@ -655,12 +655,12 @@ public class AIMajiangClient2 extends MajiangClient {
                     while (mjList.size() > 2) {
                         List<Integer> listWith3Good = select3Good(mjList);
                         if (listWith3Good.isEmpty()) {
-                            while (mjList.size() > 2) {
-                                List<Integer> listWith3Bad = select3Bad(mjList);
-                                if (listWith3Bad.isEmpty()) {
-                                    while (mjList.size() > 1) {
-                                        List<Integer> listWith2Good = select2Good(mjList);
-                                        if (listWith2Good.isEmpty()) {
+                            while (mjList.size() > 1) {
+                                List<Integer> listWith2Good = select2Good(mjList);
+                                if (listWith2Good.isEmpty()) {
+                                    while (mjList.size() > 2) {
+                                        List<Integer> listWith3Bad = select3Bad(mjList);
+                                        if (listWith3Bad.isEmpty()) {
                                             while (mjList.size() > 1) {
                                                 List<Integer> listWith2Que = select2Que(mjList);
                                                 if (listWith2Que.isEmpty()) {
@@ -687,12 +687,12 @@ public class AIMajiangClient2 extends MajiangClient {
                                             }
                                             break;
                                         } else {
-                                            select2GoodList.addAll(listWith2Good);
+                                            select3BadList.addAll(listWith3Bad);
                                         }
                                     }
                                     break;
                                 } else {
-                                    select3BadList.addAll(listWith3Bad);
+                                    select2GoodList.addAll(listWith2Good);
                                 }
                             }
                             break;
