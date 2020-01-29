@@ -290,6 +290,8 @@ public class GameController {
                 robotName = "玩家特级" + (robotClientSet.size() + 1);
                 client = new AIMajiangClient2(robotName);
             }
+            /*robotName = "玩家特级" + (robotClientSet.size() + 1);
+            client = new AIMajiangClient2(robotName);*/
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
             client.send(new Message(CHOOSE_SEAT, String.valueOf(tableId * 4)));

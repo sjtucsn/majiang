@@ -306,6 +306,9 @@ public class AIMajiangClient2 extends MajiangClient {
      */
     protected List<Integer> select3Bad(List<Integer> mjList) {
         List<Integer> tmpList = new ArrayList<>();
+        if (mjList.size() < 3) {
+            return tmpList;
+        }
         for (int i = 0; i < mjList.size(); i++) {
             if (i + 2 >= mjList.size()) {
                 return tmpList;
@@ -628,18 +631,18 @@ public class AIMajiangClient2 extends MajiangClient {
             float score = (float) (select3List.size() / 3 * 30 +
                     select3GoodList.size() / 3 * 18 +
                     select2GoodList.size() / 2 * 12 +
-                    select3BadList.size() / 3 * 15 +
-                    (select2QueList.size() <= 2 ? select2QueList.size() / 2 * 12 : select2QueList.size() / 2 * 10) +
+                    select3BadList.size() / 3 * 12 +
+                    (select2QueList.size() <= 2 ? select2QueList.size() / 2 * 16 : select2QueList.size() / 2 * 10) +
                     select2BadList.size() / 2 * 8 +
-                    select1List.size() * 2);
+                    select1List.size());
             /*System.out.println("-----------------算分结果begin-----------------");
-            System.out.println(select3List);
-            System.out.println(select3GoodList);
-            System.out.println(select3BadList);
-            System.out.println(select2GoodList);
-            System.out.println(select2QueList);
-            System.out.println(select2BadList);
-            System.out.println(select1List);
+            System.out.print(select3List);
+            System.out.print(select3GoodList);
+            System.out.print(select3BadList);
+            System.out.print(select2GoodList);
+            System.out.print(select2QueList);
+            System.out.print(select2BadList);
+            System.out.print(select1List);
             System.out.println("-----------------算分结果end-----------------" + score);*/
             return score;
         }
@@ -658,7 +661,7 @@ public class AIMajiangClient2 extends MajiangClient {
                             while (mjList.size() > 1) {
                                 List<Integer> listWith2Good = select2Good(mjList);
                                 if (listWith2Good.isEmpty()) {
-                                    while (mjList.size() > 2) {
+                                    while (mjList.size() > 1) {
                                         List<Integer> listWith3Bad = select3Bad(mjList);
                                         if (listWith3Bad.isEmpty()) {
                                             while (mjList.size() > 1) {
