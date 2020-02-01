@@ -125,6 +125,9 @@ public class GameController {
                     user.setRobotPlay(true);
                 }
             }
+            currentGame.setMessageType(INFO);
+            currentGame.setMessage(name + "开启托管");
+            sendMessage(currentGame);
             LOGGER.info("{}异常退出，改为托管模式，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}}", name, userMap, robotClientSet, webSocketSet);
             return;
         }
