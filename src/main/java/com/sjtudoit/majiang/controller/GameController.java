@@ -43,7 +43,7 @@ public class GameController {
     }
 
     // 所有建立的websocket服务端连接集合
-    private static Set<GameController> webSocketSet = new CopyOnWriteArraySet<>();
+    public static Set<GameController> webSocketSet = new CopyOnWriteArraySet<>();
 
     // 机器人集合
     private static Set<MajiangClient> robotClientSet = new CopyOnWriteArraySet<>();
@@ -1015,6 +1015,14 @@ public class GameController {
                 }
             }
         }
+    }
+
+    public MajiangClient getRobotClient() {
+        return robotClient;
+    }
+
+    public Session getSession() {
+        return session;
     }
 
     @Override
