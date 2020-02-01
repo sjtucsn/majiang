@@ -33,7 +33,7 @@ import static com.sjtudoit.majiang.constant.MessageType.*;
 public class GameController {
 
     // 创建默认当前游戏
-    private static List<Game> currentGameList = new ArrayList<>();
+    public static List<Game> currentGameList = new ArrayList<>();
 
     // 创建三桌麻将
     static {

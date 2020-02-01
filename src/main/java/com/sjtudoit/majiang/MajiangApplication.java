@@ -1,11 +1,15 @@
 package com.sjtudoit.majiang;
 
 import com.sjtudoit.majiang.controller.GameController;
+import com.sjtudoit.majiang.dto.Game;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 
+import java.util.ArrayList;
 import java.util.Set;
+
+import static com.sjtudoit.majiang.constant.MessageType.INFO;
 
 @SpringBootApplication(exclude= {DataSourceAutoConfiguration.class})
 public class MajiangApplication {
@@ -37,6 +41,11 @@ public class MajiangApplication {
                         for (GameController gameController : webSocketSet) {
                             gameController.getSession().close();
                         }
+                        GameController.currentGameList = new ArrayList<Game>() {{
+                            add(new Game(INFO));
+                            add(new Game(INFO));
+                            add(new Game(INFO));
+                        }};
                     }
                 }
                 new Thread(new ClearThread()).run();
