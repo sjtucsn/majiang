@@ -43,6 +43,7 @@ public class AIMajiangClient extends MajiangClient {
             int maxScore = result[1];
             logger.info("当前分数{}，如果按照这么吃{}后的分数是{}", currentScore, (currentOutMjCode - 2) + " " + (currentOutMjCode - 1) + " " + currentOutMjCode, maxScore + 30);
             if (maxScore + 30 > currentScore && result[0] != currentOutMjCode && !((currentOutMjCode % 10 > 3 ) && result[0] == currentOutMjCode - 3)) {
+                currentScore = maxScore + 30;
                 mjId1 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 2).findFirst().get().getId();
                 mjId2 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 1).findFirst().get().getId();
             }
@@ -55,6 +56,7 @@ public class AIMajiangClient extends MajiangClient {
             int maxScore = result[1];
             logger.info("当前分数{}，如果按照这么吃{}后的分数是{}", currentScore, (currentOutMjCode - 1) + " " + currentOutMjCode + " " + (currentOutMjCode + 1), maxScore + 30);
             if (maxScore + 30 > currentScore && result[0] != currentOutMjCode) {
+                currentScore = maxScore + 30;
                 mjId1 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 1).findFirst().get().getId();
                 mjId2 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode + 1).findFirst().get().getId();
             }

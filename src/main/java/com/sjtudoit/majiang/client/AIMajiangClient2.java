@@ -43,6 +43,7 @@ public class AIMajiangClient2 extends MajiangClient {
             float maxScore = result[1];
             logger.info("当前分数{}，如果按照这么吃{}后的分数是{}", currentScore, (currentOutMjCode - 2) + " " + (currentOutMjCode - 1) + " " + currentOutMjCode, maxScore + 30);
             if (maxScore + 30 > currentScore && result[0] != currentOutMjCode && !((currentOutMjCode % 10 > 3 ) && result[0] == currentOutMjCode - 3)) {
+                currentScore = maxScore + 30;
                 mjId1 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 2).findFirst().get().getId();
                 mjId2 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 1).findFirst().get().getId();
             }
@@ -55,6 +56,7 @@ public class AIMajiangClient2 extends MajiangClient {
             float maxScore = result[1];
             logger.info("当前分数{}，如果按照这么吃{}后的分数是{}", currentScore, (currentOutMjCode - 1) + " " + currentOutMjCode + " " + (currentOutMjCode + 1), maxScore + 30);
             if (maxScore + 30 > currentScore && result[0] != currentOutMjCode) {
+                currentScore = maxScore + 30;
                 mjId1 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode - 1).findFirst().get().getId();
                 mjId2 = mjBottomArray.stream().filter(majiang -> majiang.getCode() == currentOutMjCode + 1).findFirst().get().getId();
             }
@@ -267,14 +269,14 @@ public class AIMajiangClient2 extends MajiangClient {
             }
             int code1 = mjList.get(i);
             if (code1 % 10 > 8) {
-                return tmpList;
+                continue;
             }
             int code2 = code1 + 1;
 
             int index1 = mjList.indexOf(code1);
             int index2 = mjList.indexOf(code2);
 
-            if (index2 != -1 && mjList.get(index1 + 1) == code1 && (index2 + 1) < mjList.size() && mjList.get(index2 + 1) != code2) {
+            if (index2 != -1 && mjList.get(index1 + 1) == code1 && ((index2 + 1) == mjList.size() || (index2 + 1) < mjList.size() && mjList.get(index2 + 1) != code2)) {
                 // 1 1 2
                 mjList.remove(index2);
                 mjList.remove(index1);
@@ -306,23 +308,20 @@ public class AIMajiangClient2 extends MajiangClient {
      */
     protected List<Integer> select3Bad(List<Integer> mjList) {
         List<Integer> tmpList = new ArrayList<>();
-        if (mjList.size() < 3) {
-            return tmpList;
-        }
         for (int i = 0; i < mjList.size(); i++) {
             if (i + 2 >= mjList.size()) {
                 return tmpList;
             }
             int code1 = mjList.get(i);
             if (code1 % 10 > 7) {
-                return tmpList;
+                continue;
             }
             int code3 = code1 + 2;
 
             int index1 = mjList.indexOf(code1);
             int index3 = mjList.indexOf(code3);
 
-            if (index3 != -1 && mjList.get(index1 + 1) == code1 && (index3 + 1) < mjList.size() && mjList.get(index3 + 1) != code3) {
+            if (index3 != -1 && mjList.get(index1 + 1) == code1 && ((index3 + 1) == mjList.size() || (index3 + 1) < mjList.size() && mjList.get(index3 + 1) != code3)) {
                 // 1 1 3
                 mjList.remove(index3);
                 mjList.remove(index1);
@@ -631,11 +630,11 @@ public class AIMajiangClient2 extends MajiangClient {
             float score = (float) (select3List.size() / 3 * 30 +
                     select3GoodList.size() / 3 * 18 +
                     select2GoodList.size() / 2 * 12 +
-                    select3BadList.size() / 3 * 12 +
-                    (select2QueList.size() <= 2 ? select2QueList.size() / 2 * 16 : select2QueList.size() / 2 * 10) +
-                    select2BadList.size() / 2 * 8 +
-                    select1List.size());
-            /*System.out.println("-----------------算分结果begin-----------------");
+                    select3BadList.size() / 3 * 15 +
+                    (select2QueList.size() <= 2 && select3GoodList.isEmpty() && select3BadList.isEmpty() ? select2QueList.size() / 2 * 14 : select2QueList.size() / 2 * 10) +
+                    select2BadList.size() / 2 * 6 +
+                    select1List.size() + select1List.stream().filter(mjCode -> mjCode % 10 != 1 && mjCode % 10 != 9).count()); // 单牌中1和9的分数为1，其余分数为2
+            System.out.println("-----------------算分结果begin-----------------");
             System.out.print(select3List);
             System.out.print(select3GoodList);
             System.out.print(select3BadList);
@@ -643,7 +642,7 @@ public class AIMajiangClient2 extends MajiangClient {
             System.out.print(select2QueList);
             System.out.print(select2BadList);
             System.out.print(select1List);
-            System.out.println("-----------------算分结果end-----------------" + score);*/
+            System.out.println("-----------------算分结果end-----------------" + score);
             return score;
         }
 

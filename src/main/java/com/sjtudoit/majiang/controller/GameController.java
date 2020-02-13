@@ -283,7 +283,7 @@ public class GameController {
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             String robotName;
             MajiangClient client;
-            if (robotClientSet.size() % 3 == 2) {
+            /*if (robotClientSet.size() % 3 == 2) {
                 robotName = "玩家" + (robotClientSet.size() + 1);
                 client = new MajiangClient(robotName);
             } else if (robotClientSet.size() % 3 == 1) {
@@ -292,9 +292,9 @@ public class GameController {
             } else {
                 robotName = "玩家特级" + (robotClientSet.size() + 1);
                 client = new AIMajiangClient2(robotName);
-            }
-            /*robotName = "玩家特级" + (robotClientSet.size() + 1);
-            client = new AIMajiangClient2(robotName);*/
+            }*/
+            robotName = "玩家特级" + (robotClientSet.size() + 1);
+            client = new AIMajiangClient2(robotName);
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
             client.send(new Message(CHOOSE_SEAT, String.valueOf(tableId * 4)));
