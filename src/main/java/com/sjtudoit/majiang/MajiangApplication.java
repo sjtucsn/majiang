@@ -17,7 +17,7 @@ public class MajiangApplication {
     public static void main(String[] args) {
         // 定时清理线程
         SpringApplication.run(MajiangApplication.class, args);
-        new Thread(new ClearThread()).run();
+        new Thread(new ClearThread()).start();
     }
 
     private static class ClearThread implements Runnable {
@@ -48,7 +48,7 @@ public class MajiangApplication {
                         }};
                     }
                 }
-                new Thread(new ClearThread()).run();
+                this.run();
             } catch (Exception e) {
                 e.printStackTrace();
             }

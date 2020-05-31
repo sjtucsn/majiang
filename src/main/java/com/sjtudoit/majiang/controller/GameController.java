@@ -101,6 +101,10 @@ public class GameController {
         // 连接关闭时确保相关对象均已释放
         webSocketSet.remove(this);
         userMap.remove(session.getId());
+        if (tableId == null) {
+            LOGGER.info("用户{}尚未选桌就直接退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
+            return;
+        }
         Game currentGame = currentGameList.get(tableId);
         if (robotClient != null) {
             robotClientSet.remove(robotClient);
@@ -109,17 +113,13 @@ public class GameController {
                 return;
             }
         }
-        if (tableId == null) {
-            LOGGER.info("用户{}尚未选桌就直接退出大厅，当前的userMap是{}，\r\n robotClientSet是{}, \r\n webSocketSet是{}", name, userMap, robotClientSet, webSocketSet);
-            return;
-        }
         if (currentGame.getGameStarted()) {
             // 游戏正在进行中发生异常情况中止连接时，切换为托管模式
             WebSocketContainer container = ContainerProvider.getWebSocketContainer();
             String robotName = name;
             MajiangClient client = new AIMajiangClient2(robotName, tableId);
             robotClientSet.add(client);
-            container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
+            container.connectToServer(client, new URI("ws://localhost:8081/game/" + URLEncoder.encode(robotName, "UTF-8")));
             for (User user : currentGame.getUserList()) {
                 if (user.getUserNickName().equals(robotName)) {
                     user.setRobotPlay(true);
@@ -296,7 +296,7 @@ public class GameController {
             robotName = "玩家特级" + (robotClientSet.size() + 1);
             client = new AIMajiangClient2(robotName);
             robotClientSet.add(client);
-            container.connectToServer(client, new URI("ws://localhost:8080/game/" + URLEncoder.encode(robotName, "UTF-8")));
+            container.connectToServer(client, new URI("ws://localhost:8081/game/" + URLEncoder.encode(robotName, "UTF-8")));
             client.send(new Message(CHOOSE_SEAT, String.valueOf(tableId * 4)));
             return;
         }
