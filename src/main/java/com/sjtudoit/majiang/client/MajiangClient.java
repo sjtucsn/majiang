@@ -277,7 +277,6 @@ public class MajiangClient {
         }
         int currentOutMjCode = game.getCurrentOutMajiang().getCode();
         List<Integer> mjBottomCodeArray = user.getUserMajiangList().stream().filter(majiang -> !majiang.isJin() && !majiang.isAnGang() && !majiang.isShow()).map(Majiang::getCode).collect(Collectors.toList());
-        System.out.println(mjBottomCodeArray.stream().filter(code -> code == currentOutMjCode).count());
         if (mjBottomCodeArray.stream().filter(code -> code == currentOutMjCode).count() == 2) {
             if (currentOutMjCode % 10 == 3) {
                 if (mjBottomCodeArray.stream().filter(code -> code == currentOutMjCode - 1).count() == 1 &&

@@ -29,11 +29,30 @@ public class MajiangUtil {
             Majiang majiang = new Majiang(i, codeList.get((i - 1) / 4), nameList.get((i - 1) / 4));
             majiangList.add(majiang);
         }
-
-        // 麻将洗牌
-        Collections.shuffle(majiangList);
         return majiangList;
     }
+
+    // 测试特定情况下的麻将局
+    public static void shuffleTest(List<Majiang> majiangList) {
+        for (int i = 0; i < 16; i++) {
+            if (i == 5) continue;
+            for (int j = 16; j < 128; j++) {
+                if (majiangList.get(j).getCode() == i) {
+                    Majiang tmp = majiangList.get(i);
+                    majiangList.set(i, majiangList.get(j));
+                    majiangList.set(j, tmp);
+                }
+            }
+        }
+        for (int i = 16; i < 64; i++) {
+            if (majiangList.get(i).getCode() == 5) {
+                Majiang tmp = majiangList.get(i);
+                majiangList.set(i, majiangList.get(128 - i));
+                majiangList.set(128 - i, tmp);
+            }
+        }
+    }
+
     /**
      * 开始新游戏
      * @param bankerName 庄家的名称
@@ -43,6 +62,9 @@ public class MajiangUtil {
      */
     public static Game newGame(String bankerName, Integer bankerNo, List<User> userList) {
         List<Majiang> majiangList = generateMajiangList();
+        // 麻将洗牌
+        Collections.shuffle(majiangList);
+        // shuffleTest(majiangList);
 
         for (int i = 0; i < userList.size(); i++) {
             User user = userList.get(i);
@@ -137,7 +159,6 @@ public class MajiangUtil {
         return canHu;
     }
 
-
     public static boolean canHuWithNewMajiang(List<Majiang> userMajiangList, Majiang newMajiang) {
         if (newMajiang == null || newMajiang.getCode() == null) {
             return false;
@@ -147,6 +168,58 @@ public class MajiangUtil {
         boolean canHu = canHu(tmpMajiangList, true);
         System.out.println();
         return canHu;
+    }
+
+    public static boolean isSpecialSituation(List<Majiang> userMajiangList) {
+        return isJinQue(userMajiangList) || isXianJin(userMajiangList);
+    }
+
+    public static boolean isJinQue(List<Majiang> userMajiangList) {
+        List<Majiang> jinList = userMajiangList.stream().filter(Majiang::isJin).collect(Collectors.toList());
+        if (jinList.size() != 2) {
+            return false;
+        }
+        List<Integer> majiangCodes = userMajiangList.stream().filter(majiang -> !majiang.isJin() && !majiang.isShow() && !majiang.isAnGang()).sorted(Comparator.comparing(Majiang::getCode)).map(Majiang::getCode).collect(Collectors.toList());
+        for (Integer code1 : mjCodeArray) {
+            List<Integer> list1 = new ArrayList<>(majiangCodes);
+            list1.add(code1);
+            Collections.sort(list1);
+            System.out.println("判断canHuWithoutQue" + list1);
+            if (canHuWithoutQue(list1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isXianJin(List<Majiang> userMajiangList) {
+        List<Majiang> jinList = userMajiangList.stream().filter(Majiang::isJin).collect(Collectors.toList());
+        if (jinList.size() != 1) {
+            return false;
+        }
+        List<Integer> majiangCodes = userMajiangList.stream().filter(majiang -> !majiang.isJin() && !majiang.isShow() && !majiang.isAnGang()).sorted(Comparator.comparing(Majiang::getCode)).map(Majiang::getCode).collect(Collectors.toList());
+        return canHuWithoutQue(majiangCodes);
+    }
+
+    public static boolean isJinKeng(List<Majiang> userMajiangList) {
+        List<Majiang> jinList = userMajiangList.stream().filter(Majiang::isJin).collect(Collectors.toList());
+        if (jinList.size() != 1) {
+            return false;
+        }
+        Majiang jin = jinList.get(0);
+        List<Integer> majiangCodes = userMajiangList.stream().filter(majiang -> !majiang.isJin() && !majiang.isShow() && !majiang.isAnGang()).sorted(Comparator.comparing(Majiang::getCode)).map(Majiang::getCode).collect(Collectors.toList());
+
+        // 去掉金两侧的牌再判断是否能胡
+        Optional<Integer> left = majiangCodes.stream().filter(majiangCode -> majiangCode == jin.getCode() - 1).findFirst();
+        Optional<Integer> right = majiangCodes.stream().filter(majiangCode -> majiangCode == jin.getCode() + 1).findFirst();
+        if (left.isPresent() && right.isPresent()) {
+            Integer leftInteger = left.get();
+            Integer rightInteger = right.get();
+            majiangCodes.remove(leftInteger);
+            majiangCodes.remove(rightInteger);
+            return canHuWithQue(majiangCodes);
+        }
+        return false;
     }
 
     public static boolean canHu(List<Majiang> userMajiangList, boolean shouldCheck3Jin) {
@@ -322,6 +395,12 @@ public class MajiangUtil {
             case "自摸": {
                 finalScore = 2 * baseScore;
                 currentGame.setMessageType(HU_ZI_MO);
+                if (currentGame.getCurrentInMajiang().isJin()) {
+                    // 判断是否金坎
+                    if (isJinKeng(huUser.getUserMajiangList())) {
+                        finalScore = finalScore + 40;
+                    }
+                }
                 break;
             }
         }

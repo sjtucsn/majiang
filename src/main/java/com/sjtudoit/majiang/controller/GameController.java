@@ -293,7 +293,7 @@ public class GameController {
                 robotName = "玩家特级" + (robotClientSet.size() + 1);
                 client = new AIMajiangClient2(robotName);
             }*/
-            robotName = "玩家特级" + (robotClientSet.size() + 1);
+            robotName = "玩家" + (robotClientSet.size() + 1);
             client = new AIMajiangClient2(robotName);
             robotClientSet.add(client);
             container.connectToServer(client, new URI("ws://localhost:8081/game/" + URLEncoder.encode(robotName, "UTF-8")));
@@ -460,7 +460,7 @@ public class GameController {
                     }
 
                     // --------------------------- 设定vip用户每局都有金的代码（开始） ------------------------------
-                    User vipUser = null;
+                    /*User vipUser = null;
                     try {
                         vipUser = userList.stream().filter(user -> user.getUserNickName().equals("真遇")).collect(Collectors.toList()).get(0);
                     } catch (Exception e) {
@@ -479,12 +479,12 @@ public class GameController {
                             }
                         }
                         Integer code = first.getCode();
-                        if (vipUser.getUserMajiangList().stream().anyMatch(majiang -> majiang.getCode().equals(code))) {
+                        if (vipUser.getUserMajiangList().stream().filter(majiang -> majiang.getCode().equals(code)).count() == 2) {
                             LOGGER.info("本来应该开的金是{}，调换后开的金是，哦不，vip用户有金，不用调换啦", first.getName());
                         } else {
                             while (iterator.hasNext()) {
                                 Majiang next = iterator.next();
-                                if (next.getCode() < 30 && vipUser.getUserMajiangList().stream().anyMatch(majiang -> majiang.getCode().equals(next.getCode()))) {
+                                if (next.getCode() < 30 && vipUser.getUserMajiangList().stream().filter(majiang -> majiang.getCode().equals(next.getCode())).count() == 2) {
                                     // 调换两个麻将的顺序
                                     LOGGER.info("本来应该开的金是{}，调换后开的金是{}", first.getName(), next.getName());
                                     int oldId = first.getId();
@@ -500,8 +500,17 @@ public class GameController {
                                 }
                             }
                         }
-                    }
+                    }*/
                     // --------------------------- 设定vip用户每局都有金的代码（结束） ------------------------------
+
+                    // 测试模式，设置每局金都是5万
+                    /*for (int i = 0; i < remainMajiangList.size(); i++) {
+                        if (remainMajiangList.get(i).getCode() == 5) {
+                            Majiang tmp = remainMajiangList.get(0);
+                            remainMajiangList.set(0, remainMajiangList.get(i));
+                            remainMajiangList.set(i, tmp);
+                        }
+                    }*/
 
                     // 开金
                     Majiang jin = remainMajiangList.remove(0);
@@ -604,13 +613,17 @@ public class GameController {
                         nextUserNameList.add(thirdUser.getUserNickName());
                     }
 
-                    if (MajiangUtil.canHuWithNewMajiang(nextUser.getUserMajiangList(), currentOutMajiang)) {
+                    // 考虑特殊情况（金将、衔金时不能平胡）
+                    if (MajiangUtil.canHuWithNewMajiang(nextUser.getUserMajiangList(), currentOutMajiang) &&
+                            !MajiangUtil.isSpecialSituation(nextUser.getUserMajiangList())) {
                         nextUserNameList.add(nextUser.getUserNickName());
                     }
-                    if (MajiangUtil.canHuWithNewMajiang(secondUser.getUserMajiangList(), currentOutMajiang)) {
+                    if (MajiangUtil.canHuWithNewMajiang(secondUser.getUserMajiangList(), currentOutMajiang) &&
+                            !MajiangUtil.isSpecialSituation(secondUser.getUserMajiangList())) {
                         nextUserNameList.add(secondUser.getUserNickName());
                     }
-                    if (MajiangUtil.canHuWithNewMajiang(thirdUser.getUserMajiangList(), currentOutMajiang)) {
+                    if (MajiangUtil.canHuWithNewMajiang(thirdUser.getUserMajiangList(), currentOutMajiang) &&
+                            !MajiangUtil.isSpecialSituation(thirdUser.getUserMajiangList())) {
                         nextUserNameList.add(thirdUser.getUserNickName());
                     }
 
@@ -632,6 +645,9 @@ public class GameController {
                         // 无人能碰杠胡，则跳转到正常下家
                         currentGame.setCurrentUserName(nextUser.getUserNickName());
                     }
+                } else {
+                    // 把金打掉了，只能下家摸牌
+                    currentGame.setCurrentUserName(nextUser.getUserNickName());
                 }
 
                 // 更新游戏信息，设置当前进的麻将为空
@@ -653,7 +669,15 @@ public class GameController {
                 }
                 if (currentUser.getUserMajiangList().stream().filter(majiang -> !majiang.isShow() && !majiang.isAnGang()).count() % 3 != 1) {
                     // 防止网络延时的误操作
-                    LOGGER.info("指令无效，不能再摸牌");
+                    LOGGER.info("指令无效，牌数刚好，不能再摸牌");
+                    return;
+                }
+                if (!currentGame.getPhysicalNextUserName().equals(currentUserName)) {
+                    LOGGER.info("指令无效，你不是位置上的下家，只能碰或胡，不能摸");
+                    return;
+                }
+                if (currentGame.getNextUserNameList().size() > 0 && !currentGame.getNextUserNameList().get(0).equals(currentUserName)) {
+                    LOGGER.info("指令无效，有下家胡或碰此牌，你只能胡不能摸");
                     return;
                 }
                 // 用户请求摸牌
@@ -946,6 +970,10 @@ public class GameController {
             }
             case GAME_OVER: {
                 currentGame.setGameStarted(false);
+                // 游戏结束时设置所有用户无法抢金，防止多用户同时抢金时机器人有bug
+                for (User user : currentGame.getUserList()) {
+                    user.setCanQiangJin(false);
+                }
                 sendMessage(currentGame);
                 break;
             }
