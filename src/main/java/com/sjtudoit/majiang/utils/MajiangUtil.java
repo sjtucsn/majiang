@@ -395,7 +395,8 @@ public class MajiangUtil {
             case "自摸": {
                 finalScore = 2 * baseScore;
                 currentGame.setMessageType(HU_ZI_MO);
-                if (currentGame.getCurrentInMajiang().isJin()) {
+                // 第一个判断语句用于防止开盘做庄直接三头金胡牌，不存在currentInMajiang导致的bug
+                if (currentGame.getCurrentInMajiang() != null && currentGame.getCurrentInMajiang().isJin()) {
                     // 判断是否金坎
                     if (isJinKeng(huUser.getUserMajiangList())) {
                         finalScore = finalScore + 40;

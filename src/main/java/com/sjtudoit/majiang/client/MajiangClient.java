@@ -142,6 +142,12 @@ public class MajiangClient {
             // 游戏过程中遇到非上家打的碰、杠、胡情况
             if (!currentUserName.equals(game.getPhysicalNextUserName())) {
                 if (user.getUserMajiangList().stream().filter(majiang -> !majiang.isAnGang() && !majiang.isShow()).count() % 3 == 1) {
+                    if (currentOutMajiang != null && currentInMajiang.isJin()) {
+                        // 如果打出的是金，则只能过
+                        logger.info("打出的是金，只能过");
+                        send(new Message(MessageType.PASS, "过"));
+                        return;
+                    }
                     // 遇到碰杠胡等情况
                     if (MajiangUtil.canHuWithNewMajiang(user.getUserMajiangList(), currentOutMajiang)) {
                         send(new Message(MessageType.MJ_HU, "胡"));
@@ -188,6 +194,12 @@ public class MajiangClient {
                     return;
                 }
             } else {
+                if (currentOutMajiang != null && currentInMajiang.isJin()) {
+                    // 如果打出的是金，则只能抓牌
+                    logger.info("打出的是金，只能抓牌");
+                    send(new Message(MessageType.MJ_IN, "抓牌"));
+                    return;
+                }
                 // 判断上家打的牌能否胡杠碰吃，否则抓牌
                 if (MajiangUtil.canHuWithNewMajiang(user.getUserMajiangList(), currentOutMajiang)) {
                     send(new Message(MessageType.MJ_HU, "胡"));
