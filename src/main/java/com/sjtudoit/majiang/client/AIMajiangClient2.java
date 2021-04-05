@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 public class AIMajiangClient2 extends MajiangClient {
     private static Logger logger = LoggerFactory.getLogger(AIMajiangClient2.class);
 
+    private int lastOutCode = 0;
+
     public AIMajiangClient2(String name) {
         super(name);
     }
@@ -30,6 +32,10 @@ public class AIMajiangClient2 extends MajiangClient {
             return false;
         }
         int currentOutMjCode = game.getCurrentOutMajiang().getCode();
+        if (currentOutMjCode == lastOutCode) {
+            logger.info("不吃刚打出去的牌");
+            return false;
+        }
         List<Majiang> mjBottomArray = user.getUserMajiangList().stream().filter(majiang -> !majiang.isJin() && !majiang.isAnGang() && !majiang.isShow()).collect(Collectors.toList());
         List<Integer> canEatMjCodeArray = mjBottomArray.stream().map(Majiang::getCode).filter(code -> code - currentOutMjCode <= 2 || code - currentOutMjCode >= 2).collect(Collectors.toList());
         List<Integer> mjBottomCodeArray = mjBottomArray.stream().map(Majiang::getCode).collect(Collectors.toList());
@@ -193,7 +199,8 @@ public class AIMajiangClient2 extends MajiangClient {
     @Override
     protected int selectOutMajiang(List<Majiang> userMajiangList) {
         List<Integer> mjList = userMajiangList.stream().filter(majiang -> !majiang.isAnGang() && !majiang.isShow() && !majiang.isJin()).map(Majiang::getCode).sorted(Integer::compareTo).collect(Collectors.toList());
-        return (int) countMaxScoreWithOneOut(mjList)[0];
+        lastOutCode = (int) countMaxScoreWithOneOut(mjList)[0];
+        return lastOutCode;
     }
 
     /**

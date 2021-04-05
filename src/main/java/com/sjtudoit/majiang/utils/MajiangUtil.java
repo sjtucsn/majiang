@@ -396,10 +396,10 @@ public class MajiangUtil {
                 finalScore = 2 * baseScore;
                 currentGame.setMessageType(HU_ZI_MO);
                 // 第一个判断语句用于防止开盘做庄直接三头金胡牌，不存在currentInMajiang导致的bug
-                if (currentGame.getCurrentInMajiang() != null && currentGame.getCurrentInMajiang().isJin()) {
+                if (currentGame.getCurrentInMajiang().isJin() != null && currentGame.getCurrentInMajiang().isJin()) {
                     // 判断是否金坎
                     if (isJinKeng(huUser.getUserMajiangList())) {
-                        finalScore = finalScore + 40;
+                        finalScore = finalScore + 30;
                     }
                 }
                 break;
