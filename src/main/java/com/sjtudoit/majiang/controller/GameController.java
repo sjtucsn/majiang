@@ -169,6 +169,13 @@ public class GameController {
     @OnMessage
     public void onMessage(String str, Session session) throws Exception {
         LOGGER.info("用户{}，信息{}，桌号{}", userMap.get(this.session.getId()), str, tableId == null ? "null" : tableId);
+
+        if (userMap.get(this.session.getId()) == null) {
+            LOGGER.info("当前sessionId为{}，对应用户不存在，关闭连接", session.getId());
+            session.close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, ""));
+            return;
+        }
+
         Message receivedMessage = JSON.parseObject(str, Message.class);
         // 当前会话的用户名，理论上应该和currentGame.getCurrentUserName相同
         String sessionUserName = userMap.get(this.session.getId());
@@ -313,8 +320,8 @@ public class GameController {
                         user.setUserNickName("");
                         break;
                     } else {
-                        // 用户在游戏进行中退出，则直接关闭websocket连接，会触发托管模式
-                        session.close();
+                        // 用户在游戏进行中退出，则通知客户端主动关闭websocket连接，会触发托管模式
+                        session.getBasicRemote().sendText(JSONObject.toJSONString(new Message(NOTIFY_CLIENT_QUIT), SerializerFeature.DisableCircularReferenceDetect));
                     }
                 }
             }
