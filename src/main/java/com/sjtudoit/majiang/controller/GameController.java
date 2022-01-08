@@ -87,7 +87,7 @@ public class GameController {
         for (GameController gameController : webSocketSet) {
             if (gameController != this && gameController.sessionName.equals(name) && gameController.robotClient == null) {
                 LOGGER.info("用户{}进入大厅，但大厅中已有同名用户，故本次连接关闭", name);
-                session.close();
+                session.getBasicRemote().sendText(JSONObject.toJSONString(new Message(NOTIFY_CLIENT_QUIT), SerializerFeature.DisableCircularReferenceDetect));
                 return;
             }
         }

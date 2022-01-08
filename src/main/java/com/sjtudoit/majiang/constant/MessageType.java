@@ -1,6 +1,7 @@
 package com.sjtudoit.majiang.constant;
 
 public class MessageType {
+    public static final int NOTIFY_CLIENT_QUIT = -5; // android设备无法监听服务端onSocketClose，只好通知客户端主动关闭连接
     public final static int QUIT = -4;
     public final static int GET_GAME = -3;
     public final static int CHOOSE_SEAT = -2;
